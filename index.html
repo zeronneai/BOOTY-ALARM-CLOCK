@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Booty Alarm Clock — Brenda Jazmín</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --pink: #FF3C78;
+    --pink-light: #FF7BAA;
+    --pink-glow: rgba(255,60,120,0.18);
+    --gold: #F5C842;
+    --dark: #0D0A12;
+    --dark2: #14101E;
+    --dark3: #1C1628;
+    --card: rgba(255,255,255,0.045);
+    --card-border: rgba(255,255,255,0.09);
+    --text: #F5F0FF;
+    --text-muted: rgba(245,240,255,0.5);
+    --green: #3DFFB0;
+    --success: #00E87A;
+    --radius: 20px;
+    --radius-sm: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    user-select: none;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -30%;
+    left: -20%;
+    width: 70%;
+    height: 70%;
+    background: radial-gradient(ellipse, rgba(255,60,120,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    animation: pulse-bg 6s ease-in-out infinite alternate;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -20%;
+    right: -10%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(ellipse, rgba(245,200,66,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    animation: pulse-bg 8s ease-in-out infinite alternate-reverse;
+    z-index: 0;
+  }
+
+  @keyframes pulse-bg {
+    from { transform: scale(1) translate(0,0); opacity: 0.7; }
+    to   { transform: scale(1.2) translate(2%,3%); opacity: 1; }
+  }
+
+  #app {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 0 0 40px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    padding: 36px 28px 24px;
+    text-align: center;
+    position: relative;
+  }
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--pink-glow);
+    border: 1px solid rgba(255,60,120,0.3);
+    border-radius: 40px;
+    padding: 6px 14px 6px 10px;
+    margin-bottom: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--pink-light);
+  }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--pink);
+    border-radius: 50%;
+    animation: blink 1.4s ease-in-out infinite;
+  }
+  @keyframes blink {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .app-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #fff 0%, #FFB3CE 50%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .app-subtitle {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .brenda-tag {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--pink-light);
+    opacity: 0.7;
+    letter-spacing: 0.5px;
+  }
+  .brenda-tag a {
+    color: inherit;
+    text-decoration: none;
+    opacity: 1;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  .brenda-tag a:hover { opacity: 0.8; }
+
+  /* ── STREAK WIDGET ── */
+  .streak-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 28px 28px;
+  }
+  .streak-card {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 18px 16px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .streak-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--pink), transparent);
+    opacity: 0.6;
+  }
+  .streak-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 36px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--gold), #FF9F45);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1;
+  }
+  .streak-label {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .streak-fire {
+    font-size: 28px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stats-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+  }
+  .stat-mini-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .stat-mini-label { font-size: 11px; color: var(--text-muted); }
+  .stat-mini-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  /* ── ALARM SECTION ── */
+  .section-pad { padding: 0 28px; }
+  .section-title {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+  }
+
+  .alarm-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .alarm-card.active {
+    border-color: var(--pink);
+    box-shadow: 0 0 40px rgba(255,60,120,0.15), inset 0 0 30px rgba(255,60,120,0.04);
+  }
+
+  .time-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 64px;
+    font-weight: 700;
+    letter-spacing: -2px;
+    text-align: center;
+    line-height: 1;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .time-display:hover { color: var(--pink-light); }
+  .time-display.ringing {
+    animation: ring-pulse 0.5s ease-in-out infinite alternate;
+    color: var(--pink);
+  }
+  @keyframes ring-pulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.03); text-shadow: 0 0 30px rgba(255,60,120,0.5); }
+  }
+  .time-ampm {
+    text-align: center;
+    font-size: 13px;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+
+  /* Time Picker Inputs */
+  .time-picker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .time-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .time-input-label { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+  .time-input {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    width: 90px;
+    text-align: center;
+    padding: 8px 0;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .time-input:focus {
+    border-color: var(--pink);
+    background: rgba(255,60,120,0.07);
+  }
+  .time-sep {
+    font-family: 'Space Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-top: 20px;
+  }
+  .ampm-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 20px;
+  }
+  .ampm-btn {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .ampm-btn.selected {
+    background: var(--pink);
+    border-color: var(--pink);
+    color: white;
+  }
+
+  /* ── EXERCISE SELECTOR ── */
+  .exercise-toggle {
+    display: flex;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 20px;
+  }
+  .ex-btn {
+    flex: 1;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .ex-btn.active {
+    background: linear-gradient(135deg, var(--pink), #C62468);
+    color: white;
+    box-shadow: 0 4px 20px rgba(255,60,120,0.3);
+  }
+  .ex-icon { font-size: 16px; }
+
+  /* ── REPS SELECTOR ── */
+  .reps-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .reps-label { font-size: 13px; color: var(--text-muted); }
+  .reps-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .rep-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 1px solid var(--card-border);
+    background: rgba(255,255,255,0.06);
+    color: var(--text);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    line-height: 1;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .rep-btn:hover { border-color: var(--pink); color: var(--pink); }
+  .reps-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 24px;
+    font-weight: 700;
+    min-width: 36px;
+    text-align: center;
+    color: var(--gold);
+  }
+
+  /* ── SET ALARM BUTTON ── */
+  .btn-primary {
+    width: 100%;
+    padding: 18px;
+    border: none;
+    border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--pink) 0%, #C62468 100%);
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 8px 32px rgba(255,60,120,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(255,60,120,0.45);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-primary.cancel {
+    background: rgba(255,255,255,0.07);
+    box-shadow: none;
+    color: var(--text-muted);
+    border: 1px solid var(--card-border);
+  }
+  .btn-primary.cancel:hover { box-shadow: none; color: var(--text); }
+
+  /* ── ALARM STATUS ── */
+  .alarm-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+  }
+  .status-dot-row { display: flex; align-items: center; gap: 8px; }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--card-border);
+    transition: all 0.3s;
+  }
+  .status-dot.on {
+    background: var(--success);
+    box-shadow: 0 0 10px var(--success);
+    animation: blink 2s ease-in-out infinite;
+  }
+  .status-txt { font-size: 12px; color: var(--text-muted); }
+  .toggle-switch {
+    position: relative;
+    width: 52px; height: 28px;
+  }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-track {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.1);
+    border-radius: 40px;
+    cursor: pointer;
+    transition: 0.3s;
+    border: 1px solid var(--card-border);
+  }
+  .toggle-track::before {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    left: 4px; top: 3px;
+    background: white;
+    border-radius: 50%;
+    transition: 0.3s;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+  input:checked + .toggle-track { background: var(--pink); border-color: var(--pink); }
+  input:checked + .toggle-track::before { transform: translateX(24px); }
+
+  /* ── CAMERA / WORKOUT SECTION ── */
+  #workout-screen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--dark);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+  }
+  #workout-screen.visible { display: flex; }
+
+  .ringing-banner {
+    width: 100%;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, rgba(255,60,120,0.15), transparent);
+    border-bottom: 1px solid rgba(255,60,120,0.2);
+    text-align: center;
+  }
+  .ringing-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--pink-light);
+    margin-bottom: 4px;
+  }
+  .ringing-exercise {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-style: italic;
+    font-weight: 700;
+    color: white;
+  }
+  .ringing-sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .camera-container {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    flex: 1;
+    overflow: hidden;
+  }
+  #workout-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+    display: block;
+  }
+  #pose-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    transform: scaleX(-1);
+  }
+
+  /* Rep counter overlay */
+  .rep-overlay {
+    position: absolute;
+    top: 16px; left: 16px;
+    background: rgba(13,10,18,0.85);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 18px;
+    backdrop-filter: blur(10px);
+  }
+  .rep-count-big {
+    font-family: 'Space Mono', monospace;
+    font-size: 48px;
+    font-weight: 700;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--pink), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .rep-count-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-muted); }
+  .rep-goal { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Progress dots overlay */
+  .dots-overlay {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+  }
+  .rep-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    background: transparent;
+    transition: all 0.3s;
+  }
+  .rep-dot.done {
+    background: var(--pink);
+    border-color: var(--pink);
+    box-shadow: 0 0 8px var(--pink);
+  }
+
+  /* Pose state badge */
+  .pose-badge {
+    position: absolute;
+    top: 16px; right: 16px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s;
+  }
+  .pose-badge.down { background: rgba(255,60,120,0.2); border: 1px solid var(--pink); color: var(--pink-light); }
+  .pose-badge.up { background: rgba(61,255,176,0.2); border: 1px solid var(--green); color: var(--green); }
+  .pose-badge.wait { background: rgba(255,255,255,0.07); border: 1px solid var(--card-border); color: var(--text-muted); }
+
+  /* Camera status */
+  .cam-status-bar {
+    width: 100%;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(13,10,18,0.9);
+    border-top: 1px solid var(--card-border);
+  }
+  .cam-status-txt { font-size: 12px; color: var(--text-muted); }
+  .cam-tip {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 4px 10px;
+  }
+
+  /* ── CELEBRATION SCREEN ── */
+  #celebrate-screen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--dark);
+    z-index: 200;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 28px;
+  }
+  #celebrate-screen.visible { display: flex; }
+
+  .confetti-emojis {
+    font-size: 48px;
+    margin-bottom: 16px;
+    animation: bounce-in 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes bounce-in {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  .celebrate-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 44px;
+    font-weight: 900;
+    font-style: italic;
+    line-height: 1.05;
+    background: linear-gradient(135deg, #fff, var(--pink), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+    animation: bounce-in 0.7s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .celebrate-sub {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-bottom: 32px;
+    animation: fade-up 0.6s 0.3s ease both;
+  }
+  @keyframes fade-up {
+    from { transform: translateY(16px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+  }
+  .celebrate-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 340px;
+    margin-bottom: 36px;
+    animation: fade-up 0.6s 0.5s ease both;
+  }
+  .cel-stat {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 16px 10px;
+  }
+  .cel-stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .cel-stat-num.pink { color: var(--pink); }
+  .cel-stat-num.gold { color: var(--gold); }
+  .cel-stat-num.green { color: var(--green); }
+  .cel-stat-label { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+
+  .celebrate-cta {
+    width: 100%;
+    max-width: 340px;
+    animation: fade-up 0.6s 0.7s ease both;
+  }
+
+  /* ── DAYS MINI CALENDAR ── */
+  .days-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+  .day-chip {
+    flex: 1;
+    text-align: center;
+    padding: 8px 4px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--card-border);
+    transition: all 0.3s;
+  }
+  .day-chip.done {
+    background: rgba(255,60,120,0.15);
+    border-color: rgba(255,60,120,0.3);
+  }
+  .day-chip.today {
+    border-color: var(--pink);
+    background: rgba(255,60,120,0.1);
+  }
+  .day-name { font-size: 9px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; }
+  .day-check { font-size: 14px; margin-top: 3px; }
+
+  /* ── SNOOZE CHALLENGE ALTS ── */
+  .alt-challenges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .alt-chip {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .alt-chip:hover { border-color: var(--pink-light); color: var(--text); }
+  .alt-chip .chip-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+  /* ── AUDIO PLAYER (hidden) ── */
+  #alarm-audio { display: none; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,60,120,0.3); border-radius: 4px; }
+
+  /* ── LOADING INDICATOR ── */
+  .camera-loading {
+    position: absolute;
+    inset: 0;
+    background: rgba(13,10,18,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    transition: opacity 0.5s;
+  }
+  .camera-loading.hidden { opacity: 0; pointer-events: none; }
+  .loading-ring {
+    width: 56px; height: 56px;
+    border: 3px solid rgba(255,60,120,0.2);
+    border-top-color: var(--pink);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-txt { font-size: 13px; color: var(--text-muted); }
+
+  /* Particles */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    border-radius: 50%;
+    animation: float-particle 3s ease-out forwards;
+    z-index: 300;
+  }
+  @keyframes float-particle {
+    0% { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo-badge">
+      <div class="logo-dot"></div>
+      Active Now
+    </div>
+    <div class="app-title">Booty<br>Alarm Clock</div>
+    <div class="app-subtitle">La alarma que no para hasta que te muevas 🍑</div>
+    <div class="brenda-tag">by <a href="https://www.instagram.com/brendaa_jazmin/" target="_blank">@brendaa_jazmin</a></div>
+  </div>
+
+  <!-- STREAK + STATS -->
+  <div class="streak-row">
+    <div class="streak-card">
+      <div class="streak-fire">🔥</div>
+      <div class="streak-num" id="streak-num">0</div>
+      <div class="streak-label">Días de racha</div>
+    </div>
+    <div class="stats-mini">
+      <div class="stat-mini-card">
+        <span class="stat-mini-label">Total squats</span>
+        <span class="stat-mini-val" id="total-squats">0</span>
+      </div>
+      <div class="stat-mini-card">
+        <span class="stat-mini-label">Alarmas completadas</span>
+        <span class="stat-mini-val" id="total-alarms">0</span>
+      </div>
+      <div class="stat-mini-card">
+        <span class="stat-mini-label">Mejor racha</span>
+        <span class="stat-mini-val" id="best-streak">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- WEEK VIEW -->
+  <div class="section-pad" style="margin-bottom: 24px;">
+    <div class="section-title">Esta semana</div>
+    <div class="days-row" id="days-row"></div>
+  </div>
+
+  <!-- ALARM CARD -->
+  <div class="section-pad">
+    <div class="section-title">Tu alarma</div>
+    <div class="alarm-card" id="alarm-card">
+
+      <!-- Time Display -->
+      <div class="time-display" id="time-display">06:30</div>
+      <div class="time-ampm" id="time-ampm">AM · DESACTIVADA</div>
+
+      <!-- Time Picker -->
+      <div class="time-picker">
+        <div class="time-input-group">
+          <div class="time-input-label">Hora</div>
+          <input type="number" class="time-input" id="hour-input" min="1" max="12" value="6">
+        </div>
+        <div class="time-sep">:</div>
+        <div class="time-input-group">
+          <div class="time-input-label">Min</div>
+          <input type="number" class="time-input" id="min-input" min="0" max="59" value="30">
+        </div>
+        <div class="ampm-toggle">
+          <button class="ampm-btn selected" id="btn-am" onclick="setAMPM('AM')">AM</button>
+          <button class="ampm-btn" id="btn-pm" onclick="setAMPM('PM')">PM</button>
+        </div>
+      </div>
+
+      <!-- Exercise Selector -->
+      <div class="section-title" style="margin-bottom: 10px;">Elige tu ejercicio</div>
+      <div class="exercise-toggle">
+        <button class="ex-btn active" id="btn-squat" onclick="selectExercise('squat')">
+          <span class="ex-icon">🍑</span> Squats
+        </button>
+        <button class="ex-btn" id="btn-lunge" onclick="selectExercise('lunge')">
+          <span class="ex-icon">🦵</span> Lunges
+        </button>
+      </div>
+
+      <!-- Reps -->
+      <div class="reps-row">
+        <span class="reps-label">Repeticiones requeridas</span>
+        <div class="reps-controls">
+          <button class="rep-btn" onclick="changeReps(-5)">−</button>
+          <span class="reps-num" id="reps-display">10</span>
+          <button class="rep-btn" onclick="changeReps(5)">+</button>
+        </div>
+      </div>
+
+      <!-- Set Button -->
+      <button class="btn-primary" id="main-btn" onclick="toggleAlarm()">
+        <span>⏰</span> Activar Alarma
+      </button>
+
+      <!-- Status Row -->
+      <div class="alarm-status">
+        <div class="status-dot-row">
+          <div class="status-dot" id="status-dot"></div>
+          <span class="status-txt" id="status-txt">Sin alarma activa</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="alarm-toggle" onchange="handleToggle(this)">
+          <div class="toggle-track"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- QUICK CHALLENGES -->
+    <div class="section-title" style="margin-top: 4px;">Retos rápidos</div>
+    <div class="alt-challenges">
+      <div class="alt-chip" onclick="quickChallenge(5)">
+        <span class="chip-icon">⚡</span>5 Reps
+      </div>
+      <div class="alt-chip" onclick="quickChallenge(10)">
+        <span class="chip-icon">🔥</span>10 Reps
+      </div>
+      <div class="alt-chip" onclick="quickChallenge(15)">
+        <span class="chip-icon">💎</span>15 Reps
+      </div>
+      <div class="alt-chip" onclick="quickChallenge(20)">
+        <span class="chip-icon">👑</span>20 Reps
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- WORKOUT SCREEN (shown when alarm rings)         -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="workout-screen">
+  <div class="ringing-banner">
+    <div class="ringing-label">🚨 ¡Alarma sonando! — No para hasta que termines</div>
+    <div class="ringing-exercise" id="ws-exercise-name">10 Squats</div>
+    <div class="ringing-sub" id="ws-subtitle">Párate frente a la cámara y empieza a moverte</div>
+  </div>
+
+  <div class="camera-container">
+    <video id="workout-video" autoplay playsinline muted></video>
+    <canvas id="pose-canvas"></canvas>
+
+    <!-- Rep Counter -->
+    <div class="rep-overlay">
+      <div class="rep-count-label">Reps</div>
+      <div class="rep-count-big" id="ws-reps">0</div>
+      <div class="rep-goal" id="ws-goal">/ 10</div>
+    </div>
+
+    <!-- Pose State -->
+    <div class="pose-badge wait" id="pose-badge">Esperando...</div>
+
+    <!-- Progress Dots -->
+    <div class="dots-overlay" id="progress-dots"></div>
+
+    <!-- Loading Overlay -->
+    <div class="camera-loading" id="cam-loading">
+      <div class="loading-ring"></div>
+      <div class="loading-txt">Iniciando cámara y IA...</div>
+    </div>
+  </div>
+
+  <div class="cam-status-bar">
+    <span class="cam-status-txt" id="cam-status-txt">Iniciando detección...</span>
+    <span class="cam-tip" id="cam-tip-txt">📍 Muestra todo el cuerpo</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- CELEBRATION SCREEN                              -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="celebrate-screen">
+  <div class="confetti-emojis" id="cel-emoji">🎉</div>
+  <div class="celebrate-title" id="cel-title">¡Lo lograste,<br>Reina! 👑</div>
+  <div class="celebrate-sub" id="cel-sub">Completaste tu reto matutino. ¡A conquistar el día!</div>
+
+  <div class="celebrate-stats">
+    <div class="cel-stat">
+      <div class="cel-stat-num pink" id="cel-reps">10</div>
+      <div class="cel-stat-label">Reps</div>
+    </div>
+    <div class="cel-stat">
+      <div class="cel-stat-num gold" id="cel-streak">1</div>
+      <div class="cel-stat-label">Racha</div>
+    </div>
+    <div class="cel-stat">
+      <div class="cel-stat-num green" id="cel-total">10</div>
+      <div class="cel-stat-label">Total</div>
+    </div>
+  </div>
+
+  <div class="celebrate-cta">
+    <button class="btn-primary" onclick="closeCelebration()" style="margin-bottom:12px;">
+      ✨ ¡Sí, soy una campeona!
+    </button>
+    <button class="btn-primary cancel" onclick="closeCelebration()">Volver al inicio</button>
+  </div>
+</div>
+
+<!-- Hidden audio -->
+<audio id="alarm-audio" loop>
+  <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqF" type="audio/wav">
+</audio>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════
+const state = {
+  alarmHour: 6,
+  alarmMin: 30,
+  alarmAMPM: 'AM',
+  alarmActive: false,
+  exercise: 'squat',
+  targetReps: 10,
+  currentReps: 0,
+  streak: parseInt(localStorage.getItem('bac_streak') || '0'),
+  bestStreak: parseInt(localStorage.getItem('bac_best') || '0'),
+  totalSquats: parseInt(localStorage.getItem('bac_total') || '0'),
+  totalAlarms: parseInt(localStorage.getItem('bac_alarms') || '0'),
+  weekDays: JSON.parse(localStorage.getItem('bac_week') || '[]'),
+  lastCompleted: localStorage.getItem('bac_last') || '',
+  alarmInterval: null,
+  poseState: 'up',
+  poseDetector: null,
+  camera: null,
+  camStream: null,
+  isRinging: false,
+  audioCtx: null,
+  alarmNode: null,
+};
+
+// ══════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════
+function init() {
+  updateStatsDisplay();
+  renderWeek();
+  updateTimeDisplay();
+  setupAlarmChecker();
+}
+
+function updateStatsDisplay() {
+  document.getElementById('streak-num').textContent = state.streak;
+  document.getElementById('total-squats').textContent = state.totalSquats;
+  document.getElementById('total-alarms').textContent = state.totalAlarms;
+  document.getElementById('best-streak').textContent = state.bestStreak;
+}
+
+function renderWeek() {
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const today = new Date().getDay();
+  const row = document.getElementById('days-row');
+  const week = state.weekDays;
+  row.innerHTML = '';
+  days.forEach((d, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'day-chip' + (i === today ? ' today' : '') + (week.includes(i) ? ' done' : '');
+    chip.innerHTML = `<div class="day-name">${d}</div><div class="day-check">${week.includes(i) ? '✅' : (i === today ? '·' : '○')}</div>`;
+    row.appendChild(chip);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// TIME & ALARM CONTROL
+// ══════════════════════════════════════════════════════════════
+function setAMPM(val) {
+  state.alarmAMPM = val;
+  document.getElementById('btn-am').classList.toggle('selected', val === 'AM');
+  document.getElementById('btn-pm').classList.toggle('selected', val === 'PM');
+  updateTimeDisplay();
+}
+
+function selectExercise(ex) {
+  state.exercise = ex;
+  document.getElementById('btn-squat').classList.toggle('active', ex === 'squat');
+  document.getElementById('btn-lunge').classList.toggle('active', ex === 'lunge');
+}
+
+function changeReps(delta) {
+  state.targetReps = Math.min(50, Math.max(5, state.targetReps + delta));
+  document.getElementById('reps-display').textContent = state.targetReps;
+}
+
+function updateTimeDisplay() {
+  const h = parseInt(document.getElementById('hour-input').value) || 12;
+  const m = parseInt(document.getElementById('min-input').value) || 0;
+  const mStr = m < 10 ? '0' + m : '' + m;
+  state.alarmHour = h;
+  state.alarmMin = m;
+  document.getElementById('time-display').textContent = `${h < 10 ? '0'+h : h}:${mStr}`;
+  document.getElementById('time-ampm').textContent = state.alarmAMPM + ' · ' + (state.alarmActive ? 'ACTIVA' : 'DESACTIVADA');
+}
+
+document.getElementById('hour-input').addEventListener('input', updateTimeDisplay);
+document.getElementById('min-input').addEventListener('input', updateTimeDisplay);
+
+function toggleAlarm() {
+  state.alarmActive = !state.alarmActive;
+  document.getElementById('alarm-toggle').checked = state.alarmActive;
+  applyAlarmState();
+}
+
+function handleToggle(checkbox) {
+  state.alarmActive = checkbox.checked;
+  applyAlarmState();
+}
+
+function applyAlarmState() {
+  const card = document.getElementById('alarm-card');
+  const btn = document.getElementById('main-btn');
+  const dot = document.getElementById('status-dot');
+  const txt = document.getElementById('status-txt');
+  const ampm = document.getElementById('time-ampm');
+
+  if (state.alarmActive) {
+    card.classList.add('active');
+    btn.innerHTML = '<span>🔕</span> Cancelar Alarma';
+    btn.classList.add('cancel');
+    dot.classList.add('on');
+    const h = state.alarmHour < 10 ? '0'+state.alarmHour : state.alarmHour;
+    const m = state.alarmMin < 10 ? '0'+state.alarmMin : state.alarmMin;
+    txt.textContent = `Alarma para las ${h}:${m} ${state.alarmAMPM}`;
+    ampm.textContent = state.alarmAMPM + ' · ACTIVA';
+    document.getElementById('alarm-toggle').checked = true;
+  } else {
+    card.classList.remove('active');
+    btn.innerHTML = '<span>⏰</span> Activar Alarma';
+    btn.classList.remove('cancel');
+    dot.classList.remove('on');
+    txt.textContent = 'Sin alarma activa';
+    ampm.textContent = state.alarmAMPM + ' · DESACTIVADA';
+    document.getElementById('alarm-toggle').checked = false;
+  }
+}
+
+function setupAlarmChecker() {
+  setInterval(() => {
+    if (!state.alarmActive || state.isRinging) return;
+    const now = new Date();
+    let h = now.getHours();
+    const m = now.getMinutes();
+    const s = now.getSeconds();
+    // Convert alarm to 24h
+    let ah = state.alarmHour;
+    if (state.alarmAMPM === 'PM' && ah !== 12) ah += 12;
+    if (state.alarmAMPM === 'AM' && ah === 12) ah = 0;
+    if (h === ah && m === state.alarmMin && s < 3) {
+      triggerAlarm();
+    }
+  }, 1000);
+}
+
+function quickChallenge(reps) {
+  state.targetReps = reps;
+  document.getElementById('reps-display').textContent = reps;
+  // Start immediately as a quick challenge (no alarm time check)
+  startWorkoutScreen();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ALARM TRIGGER & AUDIO
+// ══════════════════════════════════════════════════════════════
+function triggerAlarm() {
+  state.isRinging = true;
+  playAlarmSound();
+  startWorkoutScreen();
+}
+
+function playAlarmSound() {
+  try {
+    if (!state.audioCtx) {
+      state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const ctx = state.audioCtx;
+    function beep() {
+      if (!state.isRinging) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(440, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+      if (state.isRinging) setTimeout(beep, 600);
+    }
+    beep();
+  } catch(e) {}
+}
+
+function stopAlarmSound() {
+  state.isRinging = false;
+  if (state.audioCtx) {
+    try { state.audioCtx.close(); } catch(e) {}
+    state.audioCtx = null;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// WORKOUT SCREEN
+// ══════════════════════════════════════════════════════════════
+function startWorkoutScreen() {
+  state.currentReps = 0;
+  state.poseState = 'up';
+
+  const exName = state.exercise === 'squat' ? 'Squats' : 'Lunges';
+  document.getElementById('ws-exercise-name').textContent = `${state.targetReps} ${exName}`;
+  document.getElementById('ws-reps').textContent = '0';
+  document.getElementById('ws-goal').textContent = `/ ${state.targetReps}`;
+  document.getElementById('ws-subtitle').textContent = state.exercise === 'squat'
+    ? 'Párate derecha, separa los pies al ancho de cadera y empieza a bajar 🍑'
+    : 'Párate derecha, da un paso al frente y empieza los lunges 🦵';
+
+  buildProgressDots();
+
+  document.getElementById('workout-screen').classList.add('visible');
+  document.getElementById('cam-loading').classList.remove('hidden');
+
+  initCamera();
+}
+
+function buildProgressDots() {
+  const container = document.getElementById('progress-dots');
+  container.innerHTML = '';
+  for (let i = 0; i < state.targetReps; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'rep-dot';
+    dot.id = `dot-${i}`;
+    container.appendChild(dot);
+  }
+}
+
+function markDot(index) {
+  const dot = document.getElementById(`dot-${index}`);
+  if (dot) dot.classList.add('done');
+}
+
+// ══════════════════════════════════════════════════════════════
+// CAMERA & POSE DETECTION
+// ══════════════════════════════════════════════════════════════
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+    });
+    state.camStream = stream;
+    const video = document.getElementById('workout-video');
+    video.srcObject = stream;
+    video.onloadedmetadata = () => {
+      video.play();
+      setupCanvas();
+      initPoseDetection(video);
+    };
+  } catch(err) {
+    document.getElementById('cam-status-txt').textContent = '⚠️ Sin acceso a cámara — Permite el acceso en tu navegador';
+    document.getElementById('cam-loading').classList.add('hidden');
+    startManualMode();
+  }
+}
+
+function setupCanvas() {
+  const video = document.getElementById('workout-video');
+  const canvas = document.getElementById('pose-canvas');
+  canvas.width = video.videoWidth || 640;
+  canvas.height = video.videoHeight || 480;
+}
+
+let poseInstance = null;
+let rafId = null;
+
+function initPoseDetection(video) {
+  // Check if MediaPipe is available
+  if (typeof Pose === 'undefined') {
+    document.getElementById('cam-status-txt').textContent = 'Modo manual activo (sin IA de poses)';
+    document.getElementById('cam-loading').classList.add('hidden');
+    startManualMode();
+    return;
+  }
+
+  poseInstance = new Pose({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+  });
+
+  poseInstance.setOptions({
+    modelComplexity: 1,
+    smoothLandmarks: true,
+    enableSegmentation: false,
+    smoothSegmentation: false,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+  });
+
+  poseInstance.onResults(onPoseResults);
+
+  const canvas = document.getElementById('pose-canvas');
+  const camUtils = new Camera(video, {
+    onFrame: async () => {
+      await poseInstance.send({ image: video });
+    },
+    width: canvas.width,
+    height: canvas.height
+  });
+
+  camUtils.start().then(() => {
+    document.getElementById('cam-loading').classList.add('hidden');
+    document.getElementById('cam-status-txt').textContent = '✅ Detección de poses activa';
+    document.getElementById('cam-tip-txt').textContent = state.exercise === 'squat' ? '📍 Muestra todo el cuerpo' : '📍 Colócate de perfil';
+  }).catch(() => {
+    document.getElementById('cam-loading').classList.add('hidden');
+    startManualMode();
+  });
+}
+
+function onPoseResults(results) {
+  const canvas = document.getElementById('pose-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!results.poseLandmarks) return;
+
+  // Draw skeleton
+  if (window.drawConnectors && window.drawLandmarks && window.POSE_CONNECTIONS) {
+    drawConnectors(ctx, results.poseLandmarks, POSE_CONNECTIONS, { color: 'rgba(255,60,120,0.5)', lineWidth: 2 });
+    drawLandmarks(ctx, results.poseLandmarks, { color: '#FF3C78', lineWidth: 1, radius: 4 });
+  }
+
+  // Count reps using knee angle
+  const lm = results.poseLandmarks;
+  if (state.exercise === 'squat') {
+    detectSquat(lm);
+  } else {
+    detectLunge(lm);
+  }
+}
+
+function getAngle(a, b, c) {
+  const ab = { x: a.x - b.x, y: a.y - b.y };
+  const cb = { x: c.x - b.x, y: c.y - b.y };
+  const dot = ab.x * cb.x + ab.y * cb.y;
+  const magAB = Math.sqrt(ab.x**2 + ab.y**2);
+  const magCB = Math.sqrt(cb.x**2 + cb.y**2);
+  if (magAB === 0 || magCB === 0) return 180;
+  return Math.acos(Math.max(-1, Math.min(1, dot / (magAB * magCB)))) * (180 / Math.PI);
+}
+
+function detectSquat(lm) {
+  // Left knee: hip(23), knee(25), ankle(27)
+  // Right knee: hip(24), knee(26), ankle(28)
+  const lAngle = getAngle(lm[23], lm[25], lm[27]);
+  const rAngle = getAngle(lm[24], lm[26], lm[28]);
+  const kneeAngle = (lAngle + rAngle) / 2;
+
+  const badge = document.getElementById('pose-badge');
+
+  if (kneeAngle < 100 && state.poseState === 'up') {
+    // Went DOWN
+    state.poseState = 'down';
+    badge.textContent = '⬇ Abajo';
+    badge.className = 'pose-badge down';
+    document.getElementById('cam-tip-txt').textContent = '🔥 ¡Ahora sube!';
+  } else if (kneeAngle > 155 && state.poseState === 'down') {
+    // Went UP — rep complete!
+    state.poseState = 'up';
+    badge.textContent = '⬆ Arriba';
+    badge.className = 'pose-badge up';
+    repComplete();
+  } else if (state.poseState === 'up') {
+    badge.textContent = '👀 Detectando...';
+    badge.className = 'pose-badge wait';
+  }
+}
+
+function detectLunge(lm) {
+  // For lunges, use one knee at a time
+  const lAngle = getAngle(lm[23], lm[25], lm[27]);
+  const rAngle = getAngle(lm[24], lm[26], lm[28]);
+  const minAngle = Math.min(lAngle, rAngle);
+
+  const badge = document.getElementById('pose-badge');
+
+  if (minAngle < 105 && state.poseState === 'up') {
+    state.poseState = 'down';
+    badge.textContent = '⬇ Lunge abajo';
+    badge.className = 'pose-badge down';
+  } else if (minAngle > 155 && state.poseState === 'down') {
+    state.poseState = 'up';
+    badge.textContent = '⬆ ¡Rep!';
+    badge.className = 'pose-badge up';
+    repComplete();
+  } else if (state.poseState === 'up') {
+    badge.textContent = '👀 Detectando...';
+    badge.className = 'pose-badge wait';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// MANUAL MODE (fallback if no camera/pose)
+// ══════════════════════════════════════════════════════════════
+function startManualMode() {
+  document.getElementById('cam-status-txt').textContent = '👆 Toca el botón para contar reps manualmente';
+  const camContainer = document.querySelector('.camera-container');
+
+  // Add a big tap button
+  const tapBtn = document.createElement('div');
+  tapBtn.style.cssText = `
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px; cursor: pointer;
+    background: rgba(13,10,18,0.9);
+  `;
+  tapBtn.innerHTML = `
+    <div style="font-size: 80px; animation: bounce-in 0.6s ease;">🍑</div>
+    <div style="font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; font-style: italic; color: white; text-align: center;">
+      Toca por cada rep
+    </div>
+    <div style="font-size: 13px; color: rgba(245,240,255,0.5); text-align: center; padding: 0 30px;">
+      Sin acceso a cámara — Cuenta manualmente
+    </div>
+  `;
+  tapBtn.onclick = () => {
+    if (state.currentReps < state.targetReps) repComplete();
+  };
+  camContainer.appendChild(tapBtn);
+}
+
+// ══════════════════════════════════════════════════════════════
+// REP COUNTING
+// ══════════════════════════════════════════════════════════════
+function repComplete() {
+  const prevReps = state.currentReps;
+  state.currentReps++;
+  document.getElementById('ws-reps').textContent = state.currentReps;
+  markDot(prevReps);
+
+  // Haptic
+  if (navigator.vibrate) navigator.vibrate(50);
+
+  document.getElementById('cam-tip-txt').textContent = `💪 ${state.currentReps}/${state.targetReps} — ¡Sigue!`;
+  document.getElementById('cam-status-txt').textContent = `Rep ${state.currentReps} completada 🔥`;
+
+  if (state.currentReps >= state.targetReps) {
+    setTimeout(workoutComplete, 600);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// WORKOUT COMPLETE
+// ══════════════════════════════════════════════════════════════
+function workoutComplete() {
+  stopAlarmSound();
+
+  // Stop camera
+  if (state.camStream) {
+    state.camStream.getTracks().forEach(t => t.stop());
+    state.camStream = null;
+  }
+
+  // Update stats
+  const today = new Date().toDateString();
+  const lastDate = new Date(state.lastCompleted);
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (state.lastCompleted === today) {
+    // Already done today, just add reps
+  } else if (state.lastCompleted === yesterday.toDateString()) {
+    state.streak++;
+  } else if (state.lastCompleted === '') {
+    state.streak = 1;
+  } else {
+    state.streak = 1; // reset streak
+  }
+
+  state.lastCompleted = today;
+  state.totalSquats += state.targetReps;
+  state.totalAlarms++;
+  if (state.streak > state.bestStreak) state.bestStreak = state.streak;
+
+  // Mark today in week
+  const dayIdx = new Date().getDay();
+  if (!state.weekDays.includes(dayIdx)) state.weekDays.push(dayIdx);
+
+  // Save
+  localStorage.setItem('bac_streak', state.streak);
+  localStorage.setItem('bac_best', state.bestStreak);
+  localStorage.setItem('bac_total', state.totalSquats);
+  localStorage.setItem('bac_alarms', state.totalAlarms);
+  localStorage.setItem('bac_last', state.lastCompleted);
+  localStorage.setItem('bac_week', JSON.stringify(state.weekDays));
+
+  // Deactivate alarm
+  state.alarmActive = false;
+  state.isRinging = false;
+  applyAlarmState();
+
+  // Show celebration
+  document.getElementById('workout-screen').classList.remove('visible');
+  showCelebration();
+}
+
+// ══════════════════════════════════════════════════════════════
+// CELEBRATION
+// ══════════════════════════════════════════════════════════════
+function showCelebration() {
+  const exName = state.exercise === 'squat' ? 'squats' : 'lunges';
+  const msgs = [
+    ['🎉', '¡Lo lograste,\nReina! 👑', `${state.targetReps} ${exName} completados. ¡A conquistar el día!`],
+    ['🔥', '¡Eso es\ncarácter! 💪', `Tu cuerpo te lo agradece. ¡${state.streak} días seguidos!`],
+    ['✨', '¡Imparable,\ncampeonas! 🏆', `${state.streak} días de racha. Brenda estaría orgullosa de ti.`],
+    ['🍑', '¡Peach goals\nalcanzados! 🌟', `${state.totalSquats} reps en total. ¡Eres una máquina!`],
+  ];
+  const pick = msgs[Math.floor(Math.random() * msgs.length)];
+
+  document.getElementById('cel-emoji').textContent = pick[0];
+  document.getElementById('cel-title').textContent = pick[1];
+  document.getElementById('cel-sub').textContent = pick[2];
+  document.getElementById('cel-reps').textContent = state.targetReps;
+  document.getElementById('cel-streak').textContent = state.streak;
+  document.getElementById('cel-total').textContent = state.totalSquats;
+
+  document.getElementById('celebrate-screen').classList.add('visible');
+  spawnParticles();
+  updateStatsDisplay();
+  renderWeek();
+}
+
+function closeCelebration() {
+  document.getElementById('celebrate-screen').classList.remove('visible');
+}
+
+function spawnParticles() {
+  const colors = ['#FF3C78','#F5C842','#3DFFB0','#FFB3CE','#fff'];
+  for (let i = 0; i < 30; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random() * 10 + 4;
+    const x = Math.random() * window.innerWidth;
+    const y = Math.random() * window.innerHeight * 0.5 + window.innerHeight * 0.2;
+    const tx = (Math.random() - 0.5) * 300 + 'px';
+    const ty = -(Math.random() * 400 + 100) + 'px';
+    p.style.cssText = `
+      left: ${x}px; top: ${y}px;
+      width: ${size}px; height: ${size}px;
+      background: ${colors[Math.floor(Math.random() * colors.length)]};
+      --tx: ${tx}; --ty: ${ty};
+      animation-delay: ${Math.random() * 0.5}s;
+      animation-duration: ${Math.random() * 1.5 + 1.5}s;
+    `;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 3500);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+// BOOT
+// ══════════════════════════════════════════════════════════════
+init();
+
+// For testing — uncomment to trigger alarm immediately:
+// setTimeout(() => { state.targetReps = 3; startWorkoutScreen(); }, 1000);
+</script>
+</body>
+</html>

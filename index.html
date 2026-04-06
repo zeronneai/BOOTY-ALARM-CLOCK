@@ -754,6 +754,113 @@
   /* ── AUDIO PLAYER (hidden) ── */
   #alarm-audio { display: none; }
 
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    position: fixed;
+    inset: 0;
+    background: var(--dark);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 28px;
+    text-align: center;
+    overflow-y: auto;
+  }
+  #login-screen.hidden { display: none; }
+  .login-logo { font-size: 72px; margin-bottom: 12px; animation: bounce-in 0.8s cubic-bezier(0.34,1.56,0.64,1); }
+  .login-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 38px; font-weight: 900; font-style: italic; line-height: 1.05;
+    background: linear-gradient(135deg, #fff 0%, #FFB3CE 50%, var(--gold) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 6px;
+    animation: bounce-in 0.9s 0.05s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  .login-sub {
+    font-size: 13px; color: var(--text-muted); margin-bottom: 36px;
+    animation: fade-up 0.6s 0.2s ease both;
+  }
+  .login-form { width: 100%; max-width: 340px; animation: fade-up 0.6s 0.3s ease both; }
+  .login-label {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 8px; text-align: left; display: block;
+  }
+  .login-input {
+    width: 100%; padding: 16px 20px;
+    background: rgba(255,255,255,0.07); border: 1px solid var(--card-border);
+    border-radius: var(--radius); color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 17px; font-weight: 500;
+    outline: none; margin-bottom: 24px; transition: border-color 0.2s, background 0.2s;
+  }
+  .login-input:focus { border-color: var(--pink); background: rgba(255,60,120,0.07); }
+  .login-input::placeholder { color: var(--text-muted); opacity: 0.7; }
+  .login-input.error { border-color: var(--pink); animation: shake 0.4s ease; }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+  .avatar-grid {
+    display: flex; gap: 10px; margin-bottom: 28px;
+    justify-content: center; flex-wrap: wrap;
+  }
+  .avatar-option {
+    font-size: 28px; width: 52px; height: 52px; border-radius: 50%;
+    border: 2px solid var(--card-border); background: var(--card);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s; user-select: none;
+  }
+  .avatar-option:active { transform: scale(0.9); }
+  .avatar-option.selected {
+    border-color: var(--pink); background: var(--pink-glow);
+    box-shadow: 0 0 20px rgba(255,60,120,0.4); transform: scale(1.12);
+  }
+
+  /* ── USER PROFILE IN HEADER ── */
+  .user-profile {
+    display: inline-flex; align-items: center; gap: 10px; margin-top: 10px;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 40px; padding: 6px 14px 6px 8px;
+  }
+  .user-avatar-sm {
+    font-size: 20px; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--pink-glow); border: 1px solid rgba(255,60,120,0.3);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .user-name-display {
+    font-size: 13px; font-weight: 600; color: var(--text);
+    max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .logout-btn {
+    background: transparent; border: none; color: var(--text-muted);
+    font-size: 11px; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; padding: 4px 6px; border-radius: 8px;
+    transition: color 0.2s; letter-spacing: 0.3px;
+  }
+  .logout-btn:hover { color: var(--pink-light); }
+
+  /* ── ÁNGULO EN TIEMPO REAL ── */
+  .angle-display {
+    position: absolute; bottom: 70px; right: 14px;
+    background: rgba(13,10,18,0.85); border: 1px solid rgba(255,60,120,0.3);
+    border-radius: var(--radius-sm); padding: 8px 12px;
+    backdrop-filter: blur(10px); text-align: center; min-width: 72px;
+    transition: border-color 0.3s;
+  }
+  .angle-display.good { border-color: var(--green); }
+  .angle-val {
+    font-family: 'Space Mono', monospace; font-size: 20px;
+    font-weight: 700; color: var(--pink-light); line-height: 1;
+    transition: color 0.2s;
+  }
+  .angle-val.good { color: var(--green); }
+  .angle-lbl {
+    font-size: 9px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--text-muted); margin-top: 2px;
+  }
+
   /* Scrollbar */
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -797,6 +904,36 @@
 </style>
 </head>
 <body>
+<!-- ═══════════════════════════════════════════════ -->
+<!-- LOGIN SCREEN (primera vez o sesión cerrada)    -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="login-screen" class="hidden">
+  <div class="login-logo">🍑</div>
+  <div class="login-title">Booty<br>Alarm Clock</div>
+  <div class="login-sub">La alarma que no para hasta que te muevas</div>
+
+  <div class="login-form">
+    <label class="login-label" for="login-name">¿Cómo te llamas?</label>
+    <input type="text" class="login-input" id="login-name"
+           placeholder="Tu nombre..." maxlength="25" autocomplete="off"
+           onkeydown="if(event.key==='Enter') handleLogin()">
+
+    <label class="login-label">Elige tu avatar</label>
+    <div class="avatar-grid">
+      <div class="avatar-option selected" data-av="👑" onclick="selectAvatar(this)">👑</div>
+      <div class="avatar-option" data-av="🔥" onclick="selectAvatar(this)">🔥</div>
+      <div class="avatar-option" data-av="💪" onclick="selectAvatar(this)">💪</div>
+      <div class="avatar-option" data-av="🌸" onclick="selectAvatar(this)">🌸</div>
+      <div class="avatar-option" data-av="⭐" onclick="selectAvatar(this)">⭐</div>
+      <div class="avatar-option" data-av="🦁" onclick="selectAvatar(this)">🦁</div>
+    </div>
+
+    <button class="btn-primary" onclick="handleLogin()">
+      <span>🚀</span> ¡Empezar!
+    </button>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- HEADER -->
@@ -807,7 +944,11 @@
     </div>
     <div class="app-title">Booty<br>Alarm Clock</div>
     <div class="app-subtitle">La alarma que no para hasta que te muevas 🍑</div>
-    <div class="brenda-tag">by <a href="https://www.instagram.com/brendaa_jazmin/" target="_blank">@brendaa_jazmin</a></div>
+    <div class="user-profile" id="user-profile">
+    <div class="user-avatar-sm" id="profile-avatar">👑</div>
+    <div class="user-name-display" id="profile-name">Cargando...</div>
+    <button class="logout-btn" onclick="confirmLogout()">· Salir</button>
+  </div>
   </div>
 
   <!-- STREAK + STATS -->
@@ -951,6 +1092,12 @@
     <!-- Progress Dots -->
     <div class="dots-overlay" id="progress-dots"></div>
 
+    <!-- Ángulo en tiempo real -->
+    <div class="angle-display" id="angle-display">
+      <div class="angle-val" id="angle-val">—</div>
+      <div class="angle-lbl">Ángulo rodilla</div>
+    </div>
+
     <!-- Loading Overlay -->
     <div class="camera-loading" id="cam-loading">
       <div class="loading-ring"></div>
@@ -1005,6 +1152,10 @@
 // STATE
 // ══════════════════════════════════════════════════════════════
 const state = {
+  // ── Usuario ──
+  user: null,
+
+  // ── Alarma ──
   alarmHour: 6,
   alarmMin: 30,
   alarmAMPM: 'AM',
@@ -1012,17 +1163,24 @@ const state = {
   exercise: 'squat',
   targetReps: 10,
   currentReps: 0,
-  streak: parseInt(localStorage.getItem('bac_streak') || '0'),
-  bestStreak: parseInt(localStorage.getItem('bac_best') || '0'),
-  totalSquats: parseInt(localStorage.getItem('bac_total') || '0'),
-  totalAlarms: parseInt(localStorage.getItem('bac_alarms') || '0'),
-  weekDays: JSON.parse(localStorage.getItem('bac_week') || '[]'),
-  lastCompleted: localStorage.getItem('bac_last') || '',
+
+  // ── Estadísticas (se cargan después del login) ──
+  streak: 0,
+  bestStreak: 0,
+  totalSquats: 0,
+  totalAlarms: 0,
+  weekDays: [],
+  weekNum: 0,
+  lastCompleted: '',
+
+  // ── Runtime ──
   alarmInterval: null,
   poseState: 'up',
+  lastRepTime: 0,
   poseDetector: null,
   camera: null,
   camStream: null,
+  wakeLock: null,
   isRinging: false,
   audioCtx: null,
   alarmNode: null,
@@ -1035,29 +1193,165 @@ const state = {
 // INIT
 // ══════════════════════════════════════════════════════════════
 function init() {
+  const savedUser = localStorage.getItem('bac_user');
+  if (!savedUser) {
+    showLoginScreen();
+    return;
+  }
+  state.user = JSON.parse(savedUser);
+  loadStats();
+  updateProfileDisplay();
   updateStatsDisplay();
   renderWeek();
   updateTimeDisplay();
+  loadAlarmSettings();
   setupAlarmChecker();
 }
 
+// ══════════════════════════════════════════════════════════════
+// LOGIN / LOGOUT
+// ══════════════════════════════════════════════════════════════
+function showLoginScreen() {
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app').style.visibility = 'hidden';
+}
+
+function hideLoginScreen() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').style.visibility = 'visible';
+}
+
+function selectAvatar(el) {
+  document.querySelectorAll('.avatar-option').forEach(a => a.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function handleLogin() {
+  const input = document.getElementById('login-name');
+  const name = input.value.trim();
+  if (!name) {
+    input.classList.add('error');
+    input.placeholder = '¡Escribe tu nombre! 😊';
+    setTimeout(() => input.classList.remove('error'), 500);
+    return;
+  }
+  const avatarEl = document.querySelector('.avatar-option.selected');
+  const avatar = avatarEl ? avatarEl.dataset.av : '👑';
+  state.user = { name, avatar, since: new Date().toISOString() };
+  localStorage.setItem('bac_user', JSON.stringify(state.user));
+  loadStats();
+  updateProfileDisplay();
+  updateStatsDisplay();
+  renderWeek();
+  updateTimeDisplay();
+  loadAlarmSettings();
+  setupAlarmChecker();
+  hideLoginScreen();
+}
+
+function updateProfileDisplay() {
+  if (!state.user) return;
+  document.getElementById('profile-avatar').textContent = state.user.avatar;
+  document.getElementById('profile-name').textContent = `Hola, ${state.user.name} ✨`;
+}
+
+function confirmLogout() {
+  const name = state.user?.name || 'amiga';
+  if (confirm(`¿Cerrar sesión, ${name}?\n\nTus estadísticas y alarmas guardadas se eliminarán de este dispositivo.`)) {
+    logout();
+  }
+}
+
+function logout() {
+  stopAlarmSound();
+  localStorage.clear();
+  state.user = null;
+  state.streak = 0; state.bestStreak = 0;
+  state.totalSquats = 0; state.totalAlarms = 0;
+  state.weekDays = []; state.lastCompleted = '';
+  state.alarmActive = false;
+  applyAlarmState();
+  showLoginScreen();
+}
+
+// ══════════════════════════════════════════════════════════════
+// ESTADÍSTICAS & SEMANA (con número de semana para reset correcto)
+// ══════════════════════════════════════════════════════════════
+function getWeekNum() {
+  const d = new Date();
+  const startOfYear = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+}
+
+function loadStats() {
+  state.streak       = parseInt(localStorage.getItem('bac_streak') || '0');
+  state.bestStreak   = parseInt(localStorage.getItem('bac_best')   || '0');
+  state.totalSquats  = parseInt(localStorage.getItem('bac_total')  || '0');
+  state.totalAlarms  = parseInt(localStorage.getItem('bac_alarms') || '0');
+  state.lastCompleted = localStorage.getItem('bac_last') || '';
+
+  // Semana: resetear si cambió la semana ISO
+  const curWeek = getWeekNum();
+  let saved = JSON.parse(localStorage.getItem('bac_week') || '{"weekNum":0,"days":[]}');
+  // Migrar formato viejo (array puro) al nuevo
+  if (Array.isArray(saved)) saved = { weekNum: 0, days: saved };
+  if (saved.weekNum !== curWeek) saved = { weekNum: curWeek, days: [] };
+  state.weekDays = saved.days;
+  state.weekNum  = curWeek;
+}
+
+function saveStats() {
+  localStorage.setItem('bac_streak',  state.streak);
+  localStorage.setItem('bac_best',    state.bestStreak);
+  localStorage.setItem('bac_total',   state.totalSquats);
+  localStorage.setItem('bac_alarms',  state.totalAlarms);
+  localStorage.setItem('bac_last',    state.lastCompleted);
+  localStorage.setItem('bac_week',    JSON.stringify({ weekNum: state.weekNum, days: state.weekDays }));
+}
+
+// ── Guardar y cargar configuración de alarma ──
+function saveAlarmSettings() {
+  localStorage.setItem('bac_alarm', JSON.stringify({
+    hour: state.alarmHour, min: state.alarmMin, ampm: state.alarmAMPM,
+    exercise: state.exercise, targetReps: state.targetReps, active: state.alarmActive,
+  }));
+}
+
+function loadAlarmSettings() {
+  const saved = JSON.parse(localStorage.getItem('bac_alarm') || 'null');
+  if (!saved) return;
+  state.alarmHour   = saved.hour   || 6;
+  state.alarmMin    = saved.min    || 30;
+  state.alarmAMPM   = saved.ampm   || 'AM';
+  state.exercise    = saved.exercise || 'squat';
+  state.targetReps  = saved.targetReps || 10;
+  state.alarmActive = saved.active || false;
+
+  document.getElementById('hour-input').value = state.alarmHour;
+  document.getElementById('min-input').value  = state.alarmMin < 10 ? '0' + state.alarmMin : state.alarmMin;
+  setAMPM(state.alarmAMPM);
+  selectExercise(state.exercise);
+  document.getElementById('reps-display').textContent = state.targetReps;
+  if (state.alarmActive) applyAlarmState();
+}
+
 function updateStatsDisplay() {
-  document.getElementById('streak-num').textContent = state.streak;
-  document.getElementById('total-squats').textContent = state.totalSquats;
-  document.getElementById('total-alarms').textContent = state.totalAlarms;
-  document.getElementById('best-streak').textContent = state.bestStreak;
+  document.getElementById('streak-num').textContent    = state.streak;
+  document.getElementById('total-squats').textContent  = state.totalSquats;
+  document.getElementById('total-alarms').textContent  = state.totalAlarms;
+  document.getElementById('best-streak').textContent   = state.bestStreak;
 }
 
 function renderWeek() {
-  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const days  = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
   const today = new Date().getDay();
-  const row = document.getElementById('days-row');
-  const week = state.weekDays;
+  const row   = document.getElementById('days-row');
   row.innerHTML = '';
   days.forEach((d, i) => {
+    const done = state.weekDays.includes(i);
     const chip = document.createElement('div');
-    chip.className = 'day-chip' + (i === today ? ' today' : '') + (week.includes(i) ? ' done' : '');
-    chip.innerHTML = `<div class="day-name">${d}</div><div class="day-check">${week.includes(i) ? '✅' : (i === today ? '·' : '○')}</div>`;
+    chip.className = 'day-chip' + (i === today ? ' today' : '') + (done ? ' done' : '');
+    chip.innerHTML = `<div class="day-name">${d}</div><div class="day-check">${done ? '✅' : (i === today ? '·' : '○')}</div>`;
     row.appendChild(chip);
   });
 }
@@ -1110,9 +1404,9 @@ function handleToggle(checkbox) {
 
 function applyAlarmState() {
   const card = document.getElementById('alarm-card');
-  const btn = document.getElementById('main-btn');
-  const dot = document.getElementById('status-dot');
-  const txt = document.getElementById('status-txt');
+  const btn  = document.getElementById('main-btn');
+  const dot  = document.getElementById('status-dot');
+  const txt  = document.getElementById('status-txt');
   const ampm = document.getElementById('time-ampm');
 
   if (state.alarmActive) {
@@ -1121,8 +1415,8 @@ function applyAlarmState() {
     btn.classList.add('cancel');
     dot.classList.add('on');
     const h = state.alarmHour < 10 ? '0'+state.alarmHour : state.alarmHour;
-    const m = state.alarmMin < 10 ? '0'+state.alarmMin : state.alarmMin;
-    txt.textContent = `Alarma para las ${h}:${m} ${state.alarmAMPM}`;
+    const m = state.alarmMin  < 10 ? '0'+state.alarmMin  : state.alarmMin;
+    txt.textContent  = `Alarma para las ${h}:${m} ${state.alarmAMPM}`;
     ampm.textContent = state.alarmAMPM + ' · ACTIVA';
     document.getElementById('alarm-toggle').checked = true;
   } else {
@@ -1130,9 +1424,25 @@ function applyAlarmState() {
     btn.innerHTML = '<span>⏰</span> Activar Alarma';
     btn.classList.remove('cancel');
     dot.classList.remove('on');
-    txt.textContent = 'Sin alarma activa';
+    txt.textContent  = 'Sin alarma activa';
     ampm.textContent = state.alarmAMPM + ' · DESACTIVADA';
     document.getElementById('alarm-toggle').checked = false;
+  }
+  saveAlarmSettings(); // Persistir configuración automáticamente
+}
+
+// ── WAKE LOCK: mantener pantalla encendida durante el ejercicio ──
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      state.wakeLock = await navigator.wakeLock.request('screen');
+    }
+  } catch(e) {}
+}
+function releaseWakeLock() {
+  if (state.wakeLock) {
+    try { state.wakeLock.release(); } catch(e) {}
+    state.wakeLock = null;
   }
 }
 
@@ -1348,7 +1658,8 @@ function playRepBeep(repNum, totalReps) {
 // ══════════════════════════════════════════════════════════════
 function startWorkoutScreen() {
   state.currentReps = 0;
-  state.poseState = 'up';
+  state.poseState   = 'up';
+  state.lastRepTime = 0;
 
   const exName = state.exercise === 'squat' ? 'Squats' : 'Lunges';
   document.getElementById('ws-exercise-name').textContent = `${state.targetReps} ${exName}`;
@@ -1363,6 +1674,7 @@ function startWorkoutScreen() {
   document.getElementById('workout-screen').classList.add('visible');
   document.getElementById('cam-loading').classList.remove('hidden');
 
+  requestWakeLock(); // Mantener pantalla encendida
   initCamera();
 }
 
@@ -1490,53 +1802,104 @@ function getAngle(a, b, c) {
   return Math.acos(Math.max(-1, Math.min(1, dot / (magAB * magCB)))) * (180 / Math.PI);
 }
 
+// Umbral mínimo de visibilidad de landmark para confiar en él
+const MIN_VIS = 0.55;
+
+function isVisible(lm, ...indices) {
+  return indices.every(i => lm[i] && (lm[i].visibility === undefined || lm[i].visibility > MIN_VIS));
+}
+
+function updateAngleDisplay(angle, isDown) {
+  const valEl  = document.getElementById('angle-val');
+  const boxEl  = document.getElementById('angle-display');
+  if (!valEl || !boxEl) return;
+  valEl.textContent = Math.round(angle) + '°';
+  if (isDown) {
+    valEl.classList.add('good');
+    boxEl.classList.add('good');
+  } else {
+    valEl.classList.remove('good');
+    boxEl.classList.remove('good');
+  }
+}
+
 function detectSquat(lm) {
-  // Left knee: hip(23), knee(25), ankle(27)
-  // Right knee: hip(24), knee(26), ankle(28)
+  // Necesitamos ver cadera, rodilla y tobillo de ambos lados
+  if (!isVisible(lm, 23, 24, 25, 26, 27, 28)) {
+    document.getElementById('pose-badge').textContent = '⚠ Muéstrate completa';
+    document.getElementById('pose-badge').className = 'pose-badge wait';
+    updateAngleDisplay(180, false);
+    return;
+  }
+
   const lAngle = getAngle(lm[23], lm[25], lm[27]);
   const rAngle = getAngle(lm[24], lm[26], lm[28]);
+  // Usar el promedio, pero ambas rodillas deben doblarse (no sólo una)
   const kneeAngle = (lAngle + rAngle) / 2;
+  const bothBending = lAngle < 130 && rAngle < 130; // ambas rodillas activas
 
   const badge = document.getElementById('pose-badge');
+  updateAngleDisplay(kneeAngle, kneeAngle < 100);
 
-  if (kneeAngle < 100 && state.poseState === 'up') {
-    // Went DOWN
+  if (kneeAngle < 95 && bothBending && state.poseState === 'up') {
+    // Squat profundo detectado → posición abajo
     state.poseState = 'down';
-    badge.textContent = '⬇ Abajo';
+    badge.textContent = '⬇ ¡Abajo!';
     badge.className = 'pose-badge down';
-    document.getElementById('cam-tip-txt').textContent = '🔥 ¡Ahora sube!';
-  } else if (kneeAngle > 155 && state.poseState === 'down') {
-    // Went UP — rep complete!
+    document.getElementById('cam-tip-txt').textContent = '🔥 ¡Empuja y sube!';
+  } else if (kneeAngle > 158 && state.poseState === 'down') {
+    // Volvió arriba → rep contada
     state.poseState = 'up';
-    badge.textContent = '⬆ Arriba';
+    badge.textContent = '⬆ ¡Rep!';
     badge.className = 'pose-badge up';
     repComplete();
   } else if (state.poseState === 'up') {
-    badge.textContent = '👀 Detectando...';
-    badge.className = 'pose-badge wait';
+    // Guiar al usuario según ángulo actual
+    if (kneeAngle < 140) {
+      badge.textContent = '↓ Baja más';
+      badge.className = 'pose-badge wait';
+    } else {
+      badge.textContent = '👀 Detectando...';
+      badge.className = 'pose-badge wait';
+      document.getElementById('cam-tip-txt').textContent = '📍 Muestra todo el cuerpo';
+    }
   }
 }
 
 function detectLunge(lm) {
-  // For lunges, use one knee at a time
-  const lAngle = getAngle(lm[23], lm[25], lm[27]);
-  const rAngle = getAngle(lm[24], lm[26], lm[28]);
-  const minAngle = Math.min(lAngle, rAngle);
+  // Para lunges necesitamos ver ambas piernas
+  if (!isVisible(lm, 23, 24, 25, 26, 27, 28)) {
+    document.getElementById('pose-badge').textContent = '⚠ Muéstrate de lado';
+    document.getElementById('pose-badge').className = 'pose-badge wait';
+    updateAngleDisplay(180, false);
+    return;
+  }
+
+  const lAngle   = getAngle(lm[23], lm[25], lm[27]);
+  const rAngle   = getAngle(lm[24], lm[26], lm[28]);
+  const minAngle = Math.min(lAngle, rAngle); // La rodilla delantera (más doblada)
 
   const badge = document.getElementById('pose-badge');
+  updateAngleDisplay(minAngle, minAngle < 100);
 
-  if (minAngle < 105 && state.poseState === 'up') {
+  if (minAngle < 95 && state.poseState === 'up') {
     state.poseState = 'down';
-    badge.textContent = '⬇ Lunge abajo';
+    badge.textContent = '⬇ ¡Lunge abajo!';
     badge.className = 'pose-badge down';
+    document.getElementById('cam-tip-txt').textContent = '🔥 ¡Rodilla trasera al suelo!';
   } else if (minAngle > 155 && state.poseState === 'down') {
     state.poseState = 'up';
     badge.textContent = '⬆ ¡Rep!';
     badge.className = 'pose-badge up';
     repComplete();
   } else if (state.poseState === 'up') {
-    badge.textContent = '👀 Detectando...';
-    badge.className = 'pose-badge wait';
+    if (minAngle < 140) {
+      badge.textContent = '↓ Baja más';
+      badge.className = 'pose-badge wait';
+    } else {
+      badge.textContent = '👀 Detectando...';
+      badge.className = 'pose-badge wait';
+    }
   }
 }
 
@@ -1575,6 +1938,11 @@ function startManualMode() {
 // REP COUNTING
 // ══════════════════════════════════════════════════════════════
 function repComplete() {
+  // Cooldown: mínimo 1.1s entre reps para evitar falsos positivos
+  const now = Date.now();
+  if (now - state.lastRepTime < 1100) return;
+  state.lastRepTime = now;
+
   const prevReps = state.currentReps;
   state.currentReps++;
   document.getElementById('ws-reps').textContent = state.currentReps;
@@ -1605,52 +1973,45 @@ function repComplete() {
 // ══════════════════════════════════════════════════════════════
 function workoutComplete() {
   stopAlarmSound();
+  releaseWakeLock();
 
-  // Stop camera
+  // Detener cámara
   if (state.camStream) {
     state.camStream.getTracks().forEach(t => t.stop());
     state.camStream = null;
   }
 
-  // Update stats
-  const today = new Date().toDateString();
-  const lastDate = new Date(state.lastCompleted);
+  // Actualizar racha
+  const today     = new Date().toDateString();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
 
   if (state.lastCompleted === today) {
-    // Already done today, just add reps
+    // Ya completó hoy, solo sumar reps
   } else if (state.lastCompleted === yesterday.toDateString()) {
     state.streak++;
-  } else if (state.lastCompleted === '') {
+  } else if (!state.lastCompleted) {
     state.streak = 1;
   } else {
-    state.streak = 1; // reset streak
+    state.streak = 1; // Se rompió la racha
   }
 
-  state.lastCompleted = today;
-  state.totalSquats += state.targetReps;
+  state.lastCompleted  = today;
+  state.totalSquats   += state.targetReps;
   state.totalAlarms++;
   if (state.streak > state.bestStreak) state.bestStreak = state.streak;
 
-  // Mark today in week
+  // Marcar día de la semana actual
   const dayIdx = new Date().getDay();
   if (!state.weekDays.includes(dayIdx)) state.weekDays.push(dayIdx);
 
-  // Save
-  localStorage.setItem('bac_streak', state.streak);
-  localStorage.setItem('bac_best', state.bestStreak);
-  localStorage.setItem('bac_total', state.totalSquats);
-  localStorage.setItem('bac_alarms', state.totalAlarms);
-  localStorage.setItem('bac_last', state.lastCompleted);
-  localStorage.setItem('bac_week', JSON.stringify(state.weekDays));
+  saveStats();
 
-  // Deactivate alarm
+  // Desactivar alarma
   state.alarmActive = false;
-  state.isRinging = false;
+  state.isRinging   = false;
   applyAlarmState();
 
-  // Show celebration
   document.getElementById('workout-screen').classList.remove('visible');
   showCelebration();
 }
@@ -1659,12 +2020,14 @@ function workoutComplete() {
 // CELEBRATION
 // ══════════════════════════════════════════════════════════════
 function showCelebration() {
+  const name   = state.user?.name || 'Campeona';
   const exName = state.exercise === 'squat' ? 'squats' : 'lunges';
   const msgs = [
-    ['🎉', '¡Lo lograste,\nReina! 👑', `${state.targetReps} ${exName} completados. ¡A conquistar el día!`],
-    ['🔥', '¡Eso es\ncarácter! 💪', `Tu cuerpo te lo agradece. ¡${state.streak} días seguidos!`],
-    ['✨', '¡Imparable,\ncampeonas! 🏆', `${state.streak} días de racha. Brenda estaría orgullosa de ti.`],
-    ['🍑', '¡Peach goals\nalcanzados! 🌟', `${state.totalSquats} reps en total. ¡Eres una máquina!`],
+    ['🎉', `¡Lo lograste,\n${name}! 👑`,    `${state.targetReps} ${exName} completados. ¡A conquistar el día!`],
+    ['🔥', `¡Eso es\ncarácter, ${name}! 💪`, `Tu cuerpo te lo agradece. ¡${state.streak} días seguidos!`],
+    ['✨', `¡Imparable,\n${name}! 🏆`,       `${state.streak} días de racha. ¡Eres una máquina!`],
+    ['🍑', `¡Peach goals,\n${name}! 🌟`,     `${state.totalSquats} reps en total. ¡Sigue así!`],
+    ['⚡', `¡Tremenda,\n${name}! 🔥`,        `¡${state.targetReps} reps perfectas! El día es tuyo.`],
   ];
   const pick = msgs[Math.floor(Math.random() * msgs.length)];
 

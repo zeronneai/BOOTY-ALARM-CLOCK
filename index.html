@@ -633,24 +633,34 @@
     z-index: 200;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     text-align: center;
-    padding: 40px 28px;
+    padding: 32px 24px 24px;
+    overflow-y: auto;
   }
   #celebrate-screen.visible { display: flex; }
-
-  .confetti-emojis {
-    font-size: 48px;
-    margin-bottom: 16px;
-    animation: bounce-in 0.6s cubic-bezier(0.34,1.56,0.64,1);
+ 
+  /* Badge superior */
+  .cel-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(245,200,66,0.15);
+    border: 1px solid rgba(245,200,66,0.4);
+    border-radius: 40px;
+    padding: 6px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 14px;
+    animation: bounce-in 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
   }
-  @keyframes bounce-in {
-    from { transform: scale(0); opacity: 0; }
-    to   { transform: scale(1); opacity: 1; }
-  }
+ 
   .celebrate-title {
     font-family: 'Playfair Display', serif;
-    font-size: 44px;
+    font-size: 40px;
     font-weight: 900;
     font-style: italic;
     line-height: 1.05;
@@ -658,33 +668,61 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
+    white-space: pre-line;
     animation: bounce-in 0.7s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;
   }
   .celebrate-sub {
-    font-size: 15px;
+    font-size: 14px;
     color: var(--text-muted);
-    margin-bottom: 32px;
+    margin-bottom: 4px;
     animation: fade-up 0.6s 0.3s ease both;
   }
-  @keyframes fade-up {
-    from { transform: translateY(16px); opacity: 0; }
-    to   { transform: translateY(0); opacity: 1; }
+ 
+  /* Imagen del personaje */
+  .cel-image-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    margin: 8px auto 0;
+    animation: fade-up 0.8s 0.2s cubic-bezier(0.34,1.56,0.64,1) both;
+    flex-shrink: 0;
   }
+  .cel-image-wrap::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 70%;
+    height: 60px;
+    background: radial-gradient(ellipse, rgba(255,60,120,0.4) 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+    filter: blur(12px);
+  }
+  .cel-character {
+    width: 100%;
+    display: block;
+    filter: drop-shadow(0 0 30px rgba(255,60,120,0.25))
+            drop-shadow(0 8px 24px rgba(0,0,0,0.5));
+  }
+ 
   .celebrate-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     max-width: 340px;
-    margin-bottom: 36px;
+    margin: 12px 0 16px;
     animation: fade-up 0.6s 0.5s ease both;
   }
   .cel-stat {
     background: var(--card);
     border: 1px solid var(--card-border);
     border-radius: var(--radius-sm);
-    padding: 16px 10px;
+    padding: 14px 10px;
+    max-width: 340px;
+    animation: fade-up 0.6s 0.7s ease both;
   }
   .cel-stat-num {
     font-family: 'Space Mono', monospace;
@@ -888,7 +926,14 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-txt { font-size: 13px; color: var(--text-muted); }
-
+ @keyframes bounce-in {
+    from { transform: scale(0.4); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
   /* Particles */
   .particle {
     position: fixed;
@@ -1115,10 +1160,20 @@
 <!-- CELEBRATION SCREEN                              -->
 <!-- ═══════════════════════════════════════════════ -->
 <div id="celebrate-screen">
-  <div class="confetti-emojis" id="cel-emoji">🎉</div>
-  <div class="celebrate-title" id="cel-title">¡Lo lograste,<br>Reina! 👑</div>
-  <div class="celebrate-sub" id="cel-sub">Completaste tu reto matutino. ¡A conquistar el día!</div>
-
+ <!-- Badge + Título en inglés -->
+  <div class="cel-badge" id="cel-emoji">🏆 &nbsp;Congratulations!</div>
+  <div class="celebrate-title" id="cel-title">You crushed it!</div>
+  <div class="celebrate-sub" id="cel-sub">10 reps done. Go conquer the day!</div>
+ 
+  <!-- Imagen sin fondo -->
+  <div class="cel-image-wrap">
+    <img class="cel-character"
+         src="https://res.cloudinary.com/dsprn0ew4/image/upload/v1775512430/Gemini_Generated_Image_87g8qd87g8qd87g8_gkshls.png"
+         alt="You're a champion!"
+         loading="eager">
+  </div>
+ 
+  <!-- Stats -->
   <div class="celebrate-stats">
     <div class="cel-stat">
       <div class="cel-stat-num pink" id="cel-reps">10</div>
@@ -1126,19 +1181,20 @@
     </div>
     <div class="cel-stat">
       <div class="cel-stat-num gold" id="cel-streak">1</div>
-      <div class="cel-stat-label">Racha</div>
+      <div class="cel-stat-label">Streak</div>
     </div>
     <div class="cel-stat">
       <div class="cel-stat-num green" id="cel-total">10</div>
       <div class="cel-stat-label">Total</div>
     </div>
   </div>
-
+ 
+  <!-- Botones -->
   <div class="celebrate-cta">
     <button class="btn-primary" onclick="closeCelebration()" style="margin-bottom:12px;">
-      ✨ ¡Sí, soy una campeona!
+      ✨ Yes, I'm a Champion!
     </button>
-    <button class="btn-primary cancel" onclick="closeCelebration()">Volver al inicio</button>
+    <button class="btn-primary cancel" onclick="closeCelebration()">Back to home</button>
   </div>
 </div>
 
@@ -2020,14 +2076,15 @@ function workoutComplete() {
 // CELEBRATION
 // ══════════════════════════════════════════════════════════════
 function showCelebration() {
-  const name   = state.user?.name || 'Campeona';
+   const name   = state.user?.name || 'Champion';
   const exName = state.exercise === 'squat' ? 'squats' : 'lunges';
+  const streakLine = state.streak > 1 ? `${state.streak}-day streak! Keep it up!` : `First one done. Now make it a habit!`;
   const msgs = [
-    ['🎉', `¡Lo lograste,\n${name}! 👑`,    `${state.targetReps} ${exName} completados. ¡A conquistar el día!`],
-    ['🔥', `¡Eso es\ncarácter, ${name}! 💪`, `Tu cuerpo te lo agradece. ¡${state.streak} días seguidos!`],
-    ['✨', `¡Imparable,\n${name}! 🏆`,       `${state.streak} días de racha. ¡Eres una máquina!`],
-    ['🍑', `¡Peach goals,\n${name}! 🌟`,     `${state.totalSquats} reps en total. ¡Sigue así!`],
-    ['⚡', `¡Tremenda,\n${name}! 🔥`,        `¡${state.targetReps} reps perfectas! El día es tuyo.`],
+    [`You crushed it,\n${name}! 👑`,    `${state.targetReps} ${exName} done. Go conquer the day!`],
+    [`That's character,\n${name}! 💪`,  `Your body thanks you. ${streakLine}`],
+    [`Unstoppable,\n${name}! 🏆`,      `${state.totalSquats} total reps and counting. You're a machine!`],
+    [`Peach goals,\n${name}! 🍑`,      `${state.targetReps} perfect ${exName}. The day is yours!`],
+    [`Let's go,\n${name}! ⚡`,         `${streakLine} ${state.totalSquats} reps total!`],
   ];
   const pick = msgs[Math.floor(Math.random() * msgs.length)];
 

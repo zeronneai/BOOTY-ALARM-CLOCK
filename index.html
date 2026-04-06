@@ -639,7 +639,7 @@
     overflow-y: auto;
   }
   #celebrate-screen.visible { display: flex; }
- 
+
   /* Badge superior */
   .cel-badge {
     display: inline-flex;
@@ -657,7 +657,7 @@
     margin-bottom: 14px;
     animation: bounce-in 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
   }
- 
+
   .celebrate-title {
     font-family: 'Playfair Display', serif;
     font-size: 40px;
@@ -678,7 +678,7 @@
     margin-bottom: 4px;
     animation: fade-up 0.6s 0.3s ease both;
   }
- 
+
   /* Imagen del personaje */
   .cel-image-wrap {
     position: relative;
@@ -706,7 +706,7 @@
     filter: drop-shadow(0 0 30px rgba(255,60,120,0.25))
             drop-shadow(0 8px 24px rgba(0,0,0,0.5));
   }
- 
+
   .celebrate-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -721,8 +721,6 @@
     border: 1px solid var(--card-border);
     border-radius: var(--radius-sm);
     padding: 14px 10px;
-    max-width: 340px;
-    animation: fade-up 0.6s 0.7s ease both;
   }
   .cel-stat-num {
     font-family: 'Space Mono', monospace;
@@ -926,7 +924,8 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-txt { font-size: 13px; color: var(--text-muted); }
- @keyframes bounce-in {
+
+  @keyframes bounce-in {
     from { transform: scale(0.4); opacity: 0; }
     to   { transform: scale(1);   opacity: 1; }
   }
@@ -934,6 +933,7 @@
     from { transform: translateY(20px); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
   }
+
   /* Particles */
   .particle {
     position: fixed;
@@ -1160,11 +1160,12 @@
 <!-- CELEBRATION SCREEN                              -->
 <!-- ═══════════════════════════════════════════════ -->
 <div id="celebrate-screen">
- <!-- Badge + Título en inglés -->
+
+  <!-- Badge + Título en inglés -->
   <div class="cel-badge" id="cel-emoji">🏆 &nbsp;Congratulations!</div>
   <div class="celebrate-title" id="cel-title">You crushed it!</div>
   <div class="celebrate-sub" id="cel-sub">10 reps done. Go conquer the day!</div>
- 
+
   <!-- Imagen sin fondo -->
   <div class="cel-image-wrap">
     <img class="cel-character"
@@ -1172,7 +1173,7 @@
          alt="You're a champion!"
          loading="eager">
   </div>
- 
+
   <!-- Stats -->
   <div class="celebrate-stats">
     <div class="cel-stat">
@@ -1188,7 +1189,7 @@
       <div class="cel-stat-label">Total</div>
     </div>
   </div>
- 
+
   <!-- Botones -->
   <div class="celebrate-cta">
     <button class="btn-primary" onclick="closeCelebration()" style="margin-bottom:12px;">
@@ -2076,7 +2077,7 @@ function workoutComplete() {
 // CELEBRATION
 // ══════════════════════════════════════════════════════════════
 function showCelebration() {
-   const name   = state.user?.name || 'Champion';
+  const name   = state.user?.name || 'Champion';
   const exName = state.exercise === 'squat' ? 'squats' : 'lunges';
   const streakLine = state.streak > 1 ? `${state.streak}-day streak! Keep it up!` : `First one done. Now make it a habit!`;
   const msgs = [
@@ -2088,12 +2089,11 @@ function showCelebration() {
   ];
   const pick = msgs[Math.floor(Math.random() * msgs.length)];
 
-  document.getElementById('cel-emoji').textContent = pick[0];
-  document.getElementById('cel-title').textContent = pick[1];
-  document.getElementById('cel-sub').textContent = pick[2];
-  document.getElementById('cel-reps').textContent = state.targetReps;
+  document.getElementById('cel-title').textContent = pick[0];
+  document.getElementById('cel-sub').textContent   = pick[1];
+  document.getElementById('cel-reps').textContent   = state.targetReps;
   document.getElementById('cel-streak').textContent = state.streak;
-  document.getElementById('cel-total').textContent = state.totalSquats;
+  document.getElementById('cel-total').textContent  = state.totalSquats;
 
   document.getElementById('celebrate-screen').classList.add('visible');
   spawnParticles();

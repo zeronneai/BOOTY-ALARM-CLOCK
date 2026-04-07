@@ -703,8 +703,36 @@
   .cel-character {
     width: 100%;
     display: block;
-    filter: drop-shadow(0 0 30px rgba(255,60,120,0.25))
-            drop-shadow(0 8px 24px rgba(0,0,0,0.5));
+    filter: drop-shadow(0 0 40px rgba(255,60,120,0.35))
+            drop-shadow(0 12px 30px rgba(0,0,0,0.6));
+    animation: char-enter 0.9s 0.2s cubic-bezier(0.34,1.56,0.64,1) both,
+               char-float  3s   1.2s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  @keyframes char-enter {
+    from {
+      transform: translateY(80px) scale(0.6);
+      opacity: 0;
+      filter: drop-shadow(0 0 0px rgba(255,60,120,0)) brightness(0.3);
+    }
+    to {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      filter: drop-shadow(0 0 40px rgba(255,60,120,0.35)) brightness(1);
+    }
+  }
+  @keyframes char-float {
+    0%,100% { transform: translateY(0px);   }
+    50%      { transform: translateY(-10px); }
+  }
+
+  /* Canvas confetti (z-index sobre todo) */
+  #confetti-canvas {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 300;
+    display: none;
   }
 
   .celebrate-stats {
@@ -1169,7 +1197,7 @@
   <!-- Imagen sin fondo -->
   <div class="cel-image-wrap">
     <img class="cel-character"
-         src="https://res.cloudinary.com/dsprn0ew4/image/upload/v1775512430/Gemini_Generated_Image_87g8qd87g8qd87g8_gkshls.png"
+         src="https://res.cloudinary.com/dsprn0ew4/image/upload/v1775537960/BRENDA_ee6cl2.png"
          alt="You're a champion!"
          loading="eager">
   </div>
@@ -1198,6 +1226,9 @@
     <button class="btn-primary cancel" onclick="closeCelebration()">Back to home</button>
   </div>
 </div>
+
+<!-- Canvas para confetti -->
+<canvas id="confetti-canvas"></canvas>
 
 <!-- Audio de workout (se reproduce en loop durante el ejercicio) -->
 <audio id="workout-music" loop preload="auto">
@@ -2107,26 +2138,78 @@ function closeCelebration() {
 }
 
 function spawnParticles() {
-  const colors = ['#FF3C78','#F5C842','#3DFFB0','#FFB3CE','#fff'];
-  for (let i = 0; i < 30; i++) {
-    const p = document.createElement('div');
-    p.className = 'particle';
-    const size = Math.random() * 10 + 4;
-    const x = Math.random() * window.innerWidth;
-    const y = Math.random() * window.innerHeight * 0.5 + window.innerHeight * 0.2;
-    const tx = (Math.random() - 0.5) * 300 + 'px';
-    const ty = -(Math.random() * 400 + 100) + 'px';
-    p.style.cssText = `
-      left: ${x}px; top: ${y}px;
-      width: ${size}px; height: ${size}px;
-      background: ${colors[Math.floor(Math.random() * colors.length)]};
-      --tx: ${tx}; --ty: ${ty};
-      animation-delay: ${Math.random() * 0.5}s;
-      animation-duration: ${Math.random() * 1.5 + 1.5}s;
-    `;
-    document.body.appendChild(p);
-    setTimeout(() => p.remove(), 3500);
+  const canvas = document.getElementById('confetti-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+
+  const colors  = ['#FF3C78','#F5C842','#3DFFB0','#FFB3CE','#fff','#C62468','#FF9F45','#B3CFFF'];
+  const shapes  = ['rect','circle','ribbon'];
+  const pieces  = [];
+
+  // 200 piezas de confetti disparadas desde arriba
+  for (let i = 0; i < 200; i++) {
+    const side = Math.random() < 0.5 ? -1 : 1;
+    pieces.push({
+      x:        Math.random() * canvas.width,
+      y:        -20 - Math.random() * canvas.height * 0.4,
+      w:        Math.random() * 14 + 5,
+      h:        Math.random() * 7  + 3,
+      color:    colors[Math.floor(Math.random() * colors.length)],
+      shape:    shapes[Math.floor(Math.random() * shapes.length)],
+      rot:      Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.18,
+      vx:       side * (Math.random() * 3 + 0.5),
+      vy:       Math.random() * 4 + 1.5,
+      opacity:  1,
+    });
   }
+
+  const startTime = Date.now();
+  let rafId;
+
+  (function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const elapsed = Date.now() - startTime;
+    let alive = false;
+
+    pieces.forEach(p => {
+      p.x  += p.vx;
+      p.y  += p.vy;
+      p.vy += 0.09;                          // gravedad
+      p.vx *= 0.995;                         // fricción leve
+      p.rot += p.rotSpeed;
+      if (elapsed > 2500) p.opacity -= 0.012;
+      if (p.opacity <= 0) return;
+      alive = true;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = Math.max(0, p.opacity);
+      ctx.fillStyle   = p.color;
+
+      if (p.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (p.shape === 'ribbon') {
+        ctx.fillRect(-p.w / 2, -p.h / 4, p.w, p.h / 2);
+      } else {
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      }
+      ctx.restore();
+    });
+
+    if (alive && elapsed < 5000) {
+      rafId = requestAnimationFrame(animate);
+    } else {
+      canvas.style.display = 'none';
+      cancelAnimationFrame(rafId);
+    }
+  })();
 }
 
 // ══════════════════════════════════════════════════════════════

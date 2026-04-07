@@ -2393,10 +2393,7 @@ function workoutComplete() {
 
   saveStats();
 
-  // Desactivar alarma
-  state.alarmActive = false;
-  state.isRinging   = false;
-  applyAlarmState();
+  state.isRinging = false;
 
   document.getElementById('workout-screen').classList.remove('visible');
   showCelebration();

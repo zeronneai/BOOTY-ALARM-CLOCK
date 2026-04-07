@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Booty Alarm Clock — Brenda Jazmín</title>
+<title>Booty Alarm Clock</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -955,7 +955,7 @@
 <div id="login-screen" class="hidden">
   <div class="login-logo">🍑</div>
   <div class="login-title">Booty<br>Alarm Clock</div>
-  <div class="login-sub">La alarma que no para hasta que te muevas</div>
+  <div class="login-sub">La alarma que no para hasta que te muevas 🍑</div>
 
   <div class="login-form">
     <label class="login-label" for="login-name">¿Cómo te llamas?</label>
@@ -1199,7 +1199,12 @@
   </div>
 </div>
 
-<!-- Hidden audio -->
+<!-- Audio de workout (se reproduce en loop durante el ejercicio) -->
+<audio id="workout-music" loop preload="auto">
+  <source src="https://res.cloudinary.com/dsprn0ew4/video/upload/v1775536848/Junior_H_con_Banda_-_El_Hijo_Mayor_En_Vivo_rofzm5.mp3" type="audio/mpeg">
+</audio>
+
+<!-- Hidden audio (legacy) -->
 <audio id="alarm-audio" loop>
   <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqFhYqF" type="audio/wav">
 </audio>
@@ -1602,6 +1607,22 @@ function playAlarmSound() {
   } catch(e) {}
 }
 
+// ── MÚSICA DE WORKOUT (empieza cuando la cámara detecta, loop) ──
+function playWorkoutMusic() {
+  const music = document.getElementById('workout-music');
+  if (!music) return;
+  music.volume = 0.85;
+  music.currentTime = 0;
+  music.play().catch(() => {}); // catch por políticas del navegador
+}
+
+function stopWorkoutMusic() {
+  const music = document.getElementById('workout-music');
+  if (!music) return;
+  music.pause();
+  music.currentTime = 0;
+}
+
 function stopAlarmSound() {
   state.isRinging = false;
   clearTimeout(state.alarmTimer);
@@ -1821,6 +1842,7 @@ function initPoseDetection(video) {
     document.getElementById('cam-loading').classList.add('hidden');
     document.getElementById('cam-status-txt').textContent = '✅ Detección de poses activa';
     document.getElementById('cam-tip-txt').textContent = state.exercise === 'squat' ? '📍 Muestra todo el cuerpo' : '📍 Colócate de perfil';
+    playWorkoutMusic(); // ← Música empieza cuando la IA está lista
   }).catch(() => {
     document.getElementById('cam-loading').classList.add('hidden');
     startManualMode();
@@ -1859,8 +1881,8 @@ function getAngle(a, b, c) {
   return Math.acos(Math.max(-1, Math.min(1, dot / (magAB * magCB)))) * (180 / Math.PI);
 }
 
-// Umbral mínimo de visibilidad de landmark para confiar en él
-const MIN_VIS = 0.55;
+// Umbral mínimo de visibilidad — más permisivo para mayor compatibilidad
+const MIN_VIS = 0.35;
 
 function isVisible(lm, ...indices) {
   return indices.every(i => lm[i] && (lm[i].visibility === undefined || lm[i].visibility > MIN_VIS));
@@ -1891,28 +1913,25 @@ function detectSquat(lm) {
 
   const lAngle = getAngle(lm[23], lm[25], lm[27]);
   const rAngle = getAngle(lm[24], lm[26], lm[28]);
-  // Usar el promedio, pero ambas rodillas deben doblarse (no sólo una)
   const kneeAngle = (lAngle + rAngle) / 2;
-  const bothBending = lAngle < 130 && rAngle < 130; // ambas rodillas activas
 
   const badge = document.getElementById('pose-badge');
-  updateAngleDisplay(kneeAngle, kneeAngle < 100);
+  updateAngleDisplay(kneeAngle, kneeAngle < 115);
 
-  if (kneeAngle < 95 && bothBending && state.poseState === 'up') {
-    // Squat profundo detectado → posición abajo
+  if (kneeAngle < 115 && state.poseState === 'up') {
+    // Bajó suficiente → posición abajo
     state.poseState = 'down';
     badge.textContent = '⬇ ¡Abajo!';
     badge.className = 'pose-badge down';
     document.getElementById('cam-tip-txt').textContent = '🔥 ¡Empuja y sube!';
-  } else if (kneeAngle > 158 && state.poseState === 'down') {
-    // Volvió arriba → rep contada
+  } else if (kneeAngle > 148 && state.poseState === 'down') {
+    // Subió → rep contada
     state.poseState = 'up';
     badge.textContent = '⬆ ¡Rep!';
     badge.className = 'pose-badge up';
     repComplete();
   } else if (state.poseState === 'up') {
-    // Guiar al usuario según ángulo actual
-    if (kneeAngle < 140) {
+    if (kneeAngle < 148) {
       badge.textContent = '↓ Baja más';
       badge.className = 'pose-badge wait';
     } else {
@@ -1934,23 +1953,23 @@ function detectLunge(lm) {
 
   const lAngle   = getAngle(lm[23], lm[25], lm[27]);
   const rAngle   = getAngle(lm[24], lm[26], lm[28]);
-  const minAngle = Math.min(lAngle, rAngle); // La rodilla delantera (más doblada)
+  const minAngle = Math.min(lAngle, rAngle);
 
   const badge = document.getElementById('pose-badge');
-  updateAngleDisplay(minAngle, minAngle < 100);
+  updateAngleDisplay(minAngle, minAngle < 115);
 
-  if (minAngle < 95 && state.poseState === 'up') {
+  if (minAngle < 115 && state.poseState === 'up') {
     state.poseState = 'down';
     badge.textContent = '⬇ ¡Lunge abajo!';
     badge.className = 'pose-badge down';
     document.getElementById('cam-tip-txt').textContent = '🔥 ¡Rodilla trasera al suelo!';
-  } else if (minAngle > 155 && state.poseState === 'down') {
+  } else if (minAngle > 145 && state.poseState === 'down') {
     state.poseState = 'up';
     badge.textContent = '⬆ ¡Rep!';
     badge.className = 'pose-badge up';
     repComplete();
   } else if (state.poseState === 'up') {
-    if (minAngle < 140) {
+    if (minAngle < 148) {
       badge.textContent = '↓ Baja más';
       badge.className = 'pose-badge wait';
     } else {
@@ -2030,6 +2049,7 @@ function repComplete() {
 // ══════════════════════════════════════════════════════════════
 function workoutComplete() {
   stopAlarmSound();
+  stopWorkoutMusic();
   releaseWakeLock();
 
   // Detener cámara

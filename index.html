@@ -1699,6 +1699,8 @@ function closeAlarmForm() {
 }
 
 function saveAlarm() {
+  unlockAudio();
+  unlockWorkoutMusic(); // Desbloquear en el tap de "Guardar"
   if (state.editingAlarmId) {
     // Actualizar existente
     const alarm = state.alarms.find(a => a.id === state.editingAlarmId);
@@ -1918,18 +1920,24 @@ function playAlarmSound() {
 }
 
 // ── MÚSICA DE WORKOUT ──
-// Los navegadores móviles BLOQUEAN audio.play() si no viene de un gesto directo.
-// Solución: "desbloquear" el elemento de audio en el gesto del usuario (tap),
-// luego ya puede reproducirse en cualquier momento.
+// Regla de los navegadores móviles: audio.play() SOLO funciona si está
+// en el mismo call stack que un gesto del usuario (tap/click).
+// Estrategia doble:
+//   1. En cada tap del usuario → intentar desbloquear (play+pause en vol 0)
+//   2. En startWorkoutScreen() → play() directo (viene de un tap de reto rápido)
+//   3. En la cámara → play() de respaldo (funciona si ya está desbloqueado)
+
 function unlockWorkoutMusic() {
   const music = document.getElementById('workout-music');
-  if (!music || music.dataset.unlocked) return;
+  if (!music) return;
+  if (music.readyState === 0) return; // aún cargando, reintentar más tarde
+  const prev = music.volume;
   music.volume = 0;
   music.play().then(() => {
     music.pause();
     music.currentTime = 0;
-    music.volume = 0.85;
-    music.dataset.unlocked = '1';
+    music.volume = prev || 0.85;
+    music._unlocked = true;
   }).catch(() => {});
 }
 
@@ -1938,7 +1946,12 @@ function playWorkoutMusic() {
   if (!music) return;
   music.volume = 0.85;
   music.currentTime = 0;
-  music.play().catch(() => {});
+  music.play().catch(() => {
+    // Si falla (autoplay bloqueado), esperar a que el usuario toque algo
+    const retry = () => { music.play().catch(() => {}); document.removeEventListener('touchstart', retry); document.removeEventListener('click', retry); };
+    document.addEventListener('touchstart', retry, { once: true });
+    document.addEventListener('click', retry, { once: true });
+  });
 }
 
 function stopWorkoutMusic() {
@@ -2082,7 +2095,8 @@ function startWorkoutScreen() {
   document.getElementById('workout-screen').classList.add('visible');
   document.getElementById('cam-loading').classList.remove('hidden');
 
-  requestWakeLock(); // Mantener pantalla encendida
+  playWorkoutMusic();  // ← Intentar AQUÍ: más cerca del gesto del usuario
+  requestWakeLock();
   initCamera();
 }
 
@@ -2499,9 +2513,11 @@ function spawnParticles() {
 // BOOT
 // ══════════════════════════════════════════════════════════════
 
-// Pre-desbloquear AudioContext en cualquier primer toque (crítico en móvil/iOS)
-document.addEventListener('touchstart', unlockAudio, { once: true });
-document.addEventListener('click', unlockAudio, { once: true });
+// Desbloquear audio en cualquier interacción del usuario (crítico en móvil/iOS)
+// Sin {once} para que reintente si el primer intento llega antes de que cargue
+function _unlockAll() { unlockAudio(); unlockWorkoutMusic(); }
+document.addEventListener('touchstart', _unlockAll);
+document.addEventListener('click',      _unlockAll);
 
 init();
 

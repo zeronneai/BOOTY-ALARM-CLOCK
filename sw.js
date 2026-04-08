@@ -1,14 +1,18 @@
 // Booty Alarm Clock — Service Worker
-// Cache-first strategy for app shell; network-first for audio/media
+// Cache-first for app shell; Cloudinary proxy for icons (iOS same-origin requirement)
 
-const CACHE_NAME = 'booty-alarm-v1';
+const CACHE_NAME = 'booty-alarm-v2';
+
+// Icon source on Cloudinary — service worker fetches this and serves it
+// under the local /icons/ path so iOS treats it as same-origin
+const ICON_BASE = 'https://res.cloudinary.com/dsprn0ew4/image/upload';
+const ICON_PUB  = 'v1775682139/Gemini_Generated_Image_7xbbjc7xbbjc7xbb_tpdbob.png';
+
+// App shell files to pre-cache (icons are fetched lazily via Cloudinary proxy)
 const CACHE_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-180.png',
 ];
 
 // ── Install: pre-cache app shell ──
@@ -16,7 +20,7 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(CACHE_URLS))
   );
-  self.skipWaiting(); // activate immediately
+  self.skipWaiting();
 });
 
 // ── Activate: delete old caches ──
@@ -28,44 +32,65 @@ self.addEventListener('activate', event => {
       )
     )
   );
-  self.clients.claim(); // take control of all open pages immediately
+  self.clients.claim();
 });
 
-// ── Fetch: cache-first for local assets, network-first for CDN ──
+// ── Fetch ──
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Skip non-GET requests and browser extensions
   if (event.request.method !== 'GET') return;
   if (url.protocol === 'chrome-extension:') return;
 
-  // For CDN resources (MediaPipe, Google Fonts, Cloudinary audio)
-  // use network-first so fresh versions are always fetched when online
+  // ── ICON PROXY ──
+  // Intercept /icons/icon-NNN.png requests and serve them from Cloudinary.
+  // This makes the icon appear same-origin to iOS Safari, which ignores
+  // cross-origin apple-touch-icon links.
+  const iconMatch = url.pathname.match(/^\/icons\/icon-(\d+)\.png$/);
+  if (iconMatch) {
+    const size = iconMatch[1];
+    const cloudUrl = `${ICON_BASE}/w_${size},h_${size},c_fill,f_png/${ICON_PUB}`;
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(cloudUrl).then(response => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          }
+          return response;
+        }).catch(() => caches.match(event.request));
+      })
+    );
+    return;
+  }
+
+  // ── CDN resources (MediaPipe, Fonts, Cloudinary audio) ──
+  // Network-first so fresh versions are fetched when online
   const isCDN = url.hostname !== self.location.hostname;
   if (isCDN) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          // Cache a copy if successful
           if (response.ok) {
             const clone = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+            caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
           }
           return response;
         })
-        .catch(() => caches.match(event.request)) // fallback to cache if offline
+        .catch(() => caches.match(event.request))
     );
     return;
   }
 
-  // Local assets: cache-first
+  // ── Local assets: cache-first ──
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(response => {
         if (response.ok) {
           const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
         }
         return response;
       });

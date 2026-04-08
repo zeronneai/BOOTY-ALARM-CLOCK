@@ -1448,6 +1448,7 @@ const state = {
   lastCompleted: '',
 
   // ── Runtime ──
+  workoutDone: false,
   alarmInterval: null,
   poseState: 'up',
   lastRepTime: 0,
@@ -1510,19 +1511,17 @@ function handleLogin() {
   const avatar = avatarEl ? avatarEl.dataset.av : '👑';
   state.user = { name, avatar, since: new Date().toISOString() };
   localStorage.setItem('bac_user', JSON.stringify(state.user));
+  // Unlock audio NOW — this is a user gesture, best moment to do it
+  unlockAudio();
   // Hide login FIRST so UI never gets stuck even if something below throws
   hideLoginScreen();
-  try {
-    loadStats();
-    updateProfileDisplay();
-    updateStatsDisplay();
-    renderWeek();
-    updateTimeDisplay();
-    loadAlarmSettings();
-    setupAlarmChecker();
-  } catch(e) {
-    console.error('handleLogin setup error:', e);
-  }
+  loadStats();
+  loadAlarms();
+  updateProfileDisplay();
+  updateStatsDisplay();
+  renderWeek();
+  renderAlarms();
+  setupAlarmChecker();
 }
 
 function updateProfileDisplay() {
@@ -1813,15 +1812,18 @@ function releaseWakeLock() {
 
 // ── ALARM CHECKER: revisa TODAS las alarmas cada segundo ──
 function setupAlarmChecker() {
-  setInterval(() => {
+  // Clear any previous interval to prevent duplicates
+  if (state.alarmInterval) clearInterval(state.alarmInterval);
+
+  state.alarmInterval = setInterval(() => {
     if (state.isRinging) return;
     const now   = new Date();
     const h     = now.getHours();
     const m     = now.getMinutes();
-    const s     = now.getSeconds();
-    if (s >= 5) return; // solo chequea en los primeros 5s del minuto
     const today = now.toDateString();
 
+    // No seconds restriction — if tab was backgrounded and wakes mid-minute,
+    // the alarm still fires. lastTriggered prevents double-firing the same day.
     for (const alarm of state.alarms) {
       if (!alarm.active) continue;
       if (alarm.lastTriggered === today) continue; // ya sonó hoy
@@ -1854,6 +1856,8 @@ function quickChallenge(reps) {
 // ══════════════════════════════════════════════════════════════
 function triggerAlarm() {
   state.isRinging = true;
+  // Ensure AudioContext exists (created earlier from user gesture, just in case)
+  unlockAudio();
   playAlarmSound();
   startWorkoutScreen();
 }
@@ -1892,11 +1896,9 @@ function playAlarmSound() {
     function alarmBurst() {
       if (!state.isRinging) return;
       state.alarmTick++;
-      // Volumen sube con cada ciclo (máx 1.0 tras 5 ciclos)
       const vol = Math.min(1.0, 0.55 + state.alarmTick * 0.09);
       const master = getMasterOutput(ctx);
 
-      // 3 pitidos rápidos tipo despertador urgente
       for (let i = 0; i < 3; i++) {
         const t = ctx.currentTime + i * 0.25;
         const osc = ctx.createOscillator();
@@ -1914,13 +1916,16 @@ function playAlarmSound() {
         osc.stop(t + 0.23);
       }
 
-      // Vibración sincronizada con los pitidos
       if (navigator.vibrate) navigator.vibrate([200, 80, 200, 80, 200]);
-
       if (state.isRinging) state.alarmTimer = setTimeout(alarmBurst, 1100);
     }
 
-    alarmBurst();
+    // Resume context if suspended (happens after tab backgrounding on mobile)
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => alarmBurst()).catch(() => alarmBurst());
+    } else {
+      alarmBurst();
+    }
   } catch(e) {}
 }
 
@@ -1954,8 +1959,14 @@ function playWorkoutMusic() {
   music.volume = 0.85;
   music.currentTime = 0;
   music.play().catch(() => {
-    // If blocked (autoplay policy), retry on next user touch
-    const retry = () => { music.play().catch(() => {}); document.removeEventListener('touchstart', retry); document.removeEventListener('click', retry); };
+    // Autoplay blocked — retry immediately on the very next user interaction
+    const retry = () => {
+      music.muted = false;
+      music.volume = 0.85;
+      music.play().catch(() => {});
+      document.removeEventListener('touchstart', retry);
+      document.removeEventListener('click', retry);
+    };
     document.addEventListener('touchstart', retry, { once: true });
     document.addEventListener('click', retry, { once: true });
   });
@@ -1975,10 +1986,9 @@ function stopAlarmSound() {
   state.alarmTimer = null;
   state.vibTimer = null;
   if (navigator.vibrate) navigator.vibrate(0);
-  if (state.audioCtx) {
-    try { state.audioCtx.close(); } catch(e) {}
-    state.audioCtx = null;
-  }
+  // Do NOT close/null the AudioContext — once created from a user gesture it
+  // stays unlocked for the session. Closing it and recreating from setInterval
+  // (not a user gesture) would produce a suspended context with no audio.
 }
 
 // ── SONIDO PRIMERA REP (energético, chord ascendente + whoosh) ──

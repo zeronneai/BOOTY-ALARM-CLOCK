@@ -1510,14 +1510,19 @@ function handleLogin() {
   const avatar = avatarEl ? avatarEl.dataset.av : '👑';
   state.user = { name, avatar, since: new Date().toISOString() };
   localStorage.setItem('bac_user', JSON.stringify(state.user));
-  loadStats();
-  updateProfileDisplay();
-  updateStatsDisplay();
-  renderWeek();
-  updateTimeDisplay();
-  loadAlarmSettings();
-  setupAlarmChecker();
+  // Hide login FIRST so UI never gets stuck even if something below throws
   hideLoginScreen();
+  try {
+    loadStats();
+    updateProfileDisplay();
+    updateStatsDisplay();
+    renderWeek();
+    updateTimeDisplay();
+    loadAlarmSettings();
+    setupAlarmChecker();
+  } catch(e) {
+    console.error('handleLogin setup error:', e);
+  }
 }
 
 function updateProfileDisplay() {
@@ -2078,7 +2083,12 @@ function startWorkoutScreen() {
     state.exercise   = state.currentAlarm.exercise;
     state.targetReps = state.currentAlarm.targetReps;
   }
+  // Stop any previous camera session
+  try { if (mediapipeCamera) { mediapipeCamera.stop(); } } catch(e) {}
+  mediapipeCamera = null;
+
   state.currentReps = 0;
+  state.workoutDone = false;
   state.poseState   = 'up';
   state.lastRepTime = 0;
 
@@ -2148,6 +2158,7 @@ function setupCanvas() {
 
 let poseInstance = null;
 let rafId = null;
+let mediapipeCamera = null;
 
 function initPoseDetection(video) {
   // Check if MediaPipe is available
@@ -2174,7 +2185,7 @@ function initPoseDetection(video) {
   poseInstance.onResults(onPoseResults);
 
   const canvas = document.getElementById('pose-canvas');
-  const camUtils = new Camera(video, {
+  mediapipeCamera = new Camera(video, {
     onFrame: async () => {
       await poseInstance.send({ image: video });
     },
@@ -2182,7 +2193,7 @@ function initPoseDetection(video) {
     height: canvas.height
   });
 
-  camUtils.start().then(() => {
+  mediapipeCamera.start().then(() => {
     document.getElementById('cam-loading').classList.add('hidden');
     document.getElementById('cam-status-txt').textContent = '✅ Detección de poses activa';
     document.getElementById('cam-tip-txt').textContent = state.exercise === 'squat' ? '📍 Muestra todo el cuerpo' : '📍 Colócate de perfil';
@@ -2322,6 +2333,9 @@ function startManualMode() {
 // REP COUNTING
 // ══════════════════════════════════════════════════════════════
 function repComplete() {
+  // Guard: stop counting once workout is done
+  if (state.workoutDone) return;
+
   // Cooldown mínimo entre reps para evitar doble conteo inmediato
   const now = Date.now();
   if (now - state.lastRepTime < 500) return;
@@ -2348,6 +2362,7 @@ function repComplete() {
   document.getElementById('cam-status-txt').textContent = `Rep ${state.currentReps} completada 🔥`;
 
   if (state.currentReps >= state.targetReps) {
+    state.workoutDone = true; // Prevent any further rep counting
     setTimeout(workoutComplete, 600);
   }
 }
@@ -2361,7 +2376,11 @@ function workoutComplete() {
   releaseWakeLock();
   state.currentAlarm = null;
 
-  // Detener cámara
+  // Detener MediaPipe Camera utility (stops the frame loop)
+  try { if (mediapipeCamera) { mediapipeCamera.stop(); } } catch(e) {}
+  mediapipeCamera = null;
+
+  // Detener stream de cámara
   if (state.camStream) {
     state.camStream.getTracks().forEach(t => t.stop());
     state.camStream = null;

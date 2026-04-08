@@ -2,8 +2,30 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Booty Alarm Clock</title>
+
+<!-- ── PWA: Web App Manifest ── -->
+<link rel="manifest" href="/manifest.json">
+
+<!-- ── PWA: iOS / Safari ── -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BootyAlarm">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<!-- Additional iOS sizes -->
+<link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png">
+
+<!-- ── PWA: Android / Chrome / General ── -->
+<meta name="theme-color" content="#FF3C78">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="BootyAlarm">
+
+<!-- ── SEO / Share ── -->
+<meta name="description" content="Alarm that only stops when you complete your squats or lunges">
+<meta name="color-scheme" content="dark">
+
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -34,8 +56,14 @@
     color: var(--text);
     font-family: 'DM Sans', sans-serif;
     min-height: 100vh;
+    min-height: 100dvh; /* dynamic viewport height — avoids iOS toolbar overlap */
     overflow-x: hidden;
     user-select: none;
+    /* Safe area insets for notch / home bar (iOS standalone mode) */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 
   /* Animated background */
@@ -2550,6 +2578,14 @@ init();
 
 // For testing — uncomment to trigger alarm immediately:
 // setTimeout(() => { state.targetReps = 3; startWorkoutScreen(); }, 1000);
+
+// ── PWA: Register Service Worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .catch(() => {}); // fail silently — app works fine without it
+  });
+}
 </script>
 </body>
 </html>

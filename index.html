@@ -1935,24 +1935,26 @@ function playAlarmSound() {
 function unlockWorkoutMusic() {
   const music = document.getElementById('workout-music');
   if (!music) return;
-  if (music.readyState === 0) return; // aún cargando, reintentar más tarde
-  const prev = music.volume;
-  music.volume = 0;
+  if (!music.paused) return; // already playing, don't touch it
+  if (music.readyState === 0) return; // still loading
+  music.muted = true; // truly silent — hardware-level mute during unlock
   music.play().then(() => {
     music.pause();
     music.currentTime = 0;
-    music.volume = prev || 0.85;
+    music.muted = false;
     music._unlocked = true;
-  }).catch(() => {});
+  }).catch(() => { music.muted = false; });
 }
 
 function playWorkoutMusic() {
   const music = document.getElementById('workout-music');
   if (!music) return;
+  if (!music.paused) return; // already playing, don't restart
+  music.muted = false;
   music.volume = 0.85;
   music.currentTime = 0;
   music.play().catch(() => {
-    // Si falla (autoplay bloqueado), esperar a que el usuario toque algo
+    // If blocked (autoplay policy), retry on next user touch
     const retry = () => { music.play().catch(() => {}); document.removeEventListener('touchstart', retry); document.removeEventListener('click', retry); };
     document.addEventListener('touchstart', retry, { once: true });
     document.addEventListener('click', retry, { once: true });
@@ -2197,7 +2199,6 @@ function initPoseDetection(video) {
     document.getElementById('cam-loading').classList.add('hidden');
     document.getElementById('cam-status-txt').textContent = '✅ Detección de poses activa';
     document.getElementById('cam-tip-txt').textContent = state.exercise === 'squat' ? '📍 Muestra todo el cuerpo' : '📍 Colócate de perfil';
-    playWorkoutMusic(); // ← Música empieza cuando la IA está lista
   }).catch(() => {
     document.getElementById('cam-loading').classList.add('hidden');
     startManualMode();

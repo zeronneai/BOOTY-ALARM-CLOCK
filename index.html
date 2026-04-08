@@ -841,7 +841,34 @@
     letter-spacing: 0.5px;
   }
   .alt-chip:hover { border-color: var(--pink-light); color: var(--text); }
+  .alt-chip:active { transform: scale(0.96); }
   .alt-chip .chip-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+
+  /* ── QUICK CHALLENGE EXERCISE PICKER ── */
+  .qc-ex-picker {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .qc-ex-btn {
+    flex: 1;
+    padding: 10px 8px;
+    background: var(--card);
+    border: 1.5px solid var(--card-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .qc-ex-btn.active {
+    border-color: var(--pink);
+    color: var(--text);
+    background: var(--pink-glow);
+  }
+  .qc-ex-btn:active { transform: scale(0.97); }
 
   /* ── MULTI-ALARM LIST ── */
   .section-title-row {
@@ -1266,6 +1293,11 @@
 
     <!-- QUICK CHALLENGES -->
     <div class="section-title" style="margin-top: 20px;">Retos rápidos</div>
+    <!-- Exercise selector for quick challenges -->
+    <div class="qc-ex-picker">
+      <button id="qc-squat" class="qc-ex-btn active" onclick="setQCExercise('squat')">🍑 Squats</button>
+      <button id="qc-lunge" class="qc-ex-btn" onclick="setQCExercise('lunge')">🦵 Lunges</button>
+    </div>
     <div class="alt-challenges">
       <div class="alt-chip" onclick="quickChallenge(5)">
         <span class="chip-icon">⚡</span>5 Reps
@@ -1348,7 +1380,7 @@
 <!-- ═══════════════════════════════════════════════ -->
 <div id="workout-screen">
   <div class="ringing-banner">
-    <div class="ringing-label">🚨 ¡Alarma sonando! — No para hasta que termines</div>
+    <div class="ringing-label" id="ringing-label">🚨 ¡Alarma sonando! — No para hasta que termines</div>
     <div class="ringing-exercise" id="ws-exercise-name">10 Squats</div>
     <div class="ringing-sub" id="ws-subtitle">Párate frente a la cámara y empieza a moverte</div>
   </div>
@@ -1871,11 +1903,17 @@ function setupAlarmChecker() {
   }, 1000);
 }
 
+function setQCExercise(ex) {
+  state.exercise = ex;
+  document.getElementById('qc-squat').classList.toggle('active', ex === 'squat');
+  document.getElementById('qc-lunge').classList.toggle('active', ex === 'lunge');
+}
+
 function quickChallenge(reps) {
   unlockAudio();
-  unlockWorkoutMusic(); // Desbloquear en el gesto del tap
+  unlockWorkoutMusic();
   state.targetReps = reps;
-  document.getElementById('reps-display').textContent = reps;
+  // state.exercise is already set by setQCExercise() (defaults to 'squat')
   startWorkoutScreen();
 }
 
@@ -2123,14 +2161,23 @@ function startWorkoutScreen() {
     state.exercise   = state.currentAlarm.exercise;
     state.targetReps = state.currentAlarm.targetReps;
   }
+
   // Stop any previous camera session
   try { if (mediapipeCamera) { mediapipeCamera.stop(); } } catch(e) {}
   mediapipeCamera = null;
+
+  // Remove any stale manual-mode tap button from a previous workout
+  document.querySelectorAll('.manual-tap-btn').forEach(el => el.remove());
 
   state.currentReps = 0;
   state.workoutDone = false;
   state.poseState   = 'up';
   state.lastRepTime = 0;
+
+  // Banner text: alarm vs quick challenge
+  document.getElementById('ringing-label').textContent = state.isRinging
+    ? '🚨 ¡Alarma sonando! — No para hasta que termines'
+    : '💪 Reto rápido — Completa tus reps';
 
   const exName = state.exercise === 'squat' ? 'Squats' : 'Lunges';
   document.getElementById('ws-exercise-name').textContent = `${state.targetReps} ${exName}`;
@@ -2344,14 +2391,16 @@ function startManualMode() {
   document.getElementById('cam-status-txt').textContent = '👆 Toca el botón para contar reps manualmente';
   const camContainer = document.querySelector('.camera-container');
 
-  // Add a big tap button
+  // Add a big tap button (class allows cleanup on next workout start)
   const tapBtn = document.createElement('div');
+  tapBtn.className = 'manual-tap-btn';
   tapBtn.style.cssText = `
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     gap: 16px; cursor: pointer;
     background: rgba(13,10,18,0.9);
+    z-index: 10;
   `;
   tapBtn.innerHTML = `
     <div style="font-size: 80px; animation: bounce-in 0.6s ease;">🍑</div>

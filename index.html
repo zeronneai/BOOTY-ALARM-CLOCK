@@ -2027,7 +2027,20 @@ function unlockWorkoutMusic() {
   });
 }
 
+// Module-level ref so stopWorkoutMusic() can cancel a pending retry
+let _musicRetryFn = null;
+
+function _clearMusicRetry() {
+  if (_musicRetryFn) {
+    document.removeEventListener('touchstart', _musicRetryFn);
+    document.removeEventListener('click',      _musicRetryFn);
+    _musicRetryFn = null;
+  }
+}
+
 function playWorkoutMusic() {
+  _clearMusicRetry(); // cancel any stale retry from a previous workout
+
   const music = _getActiveMusic();
   if (!music) return;
   if (!music.paused) return; // already playing
@@ -2035,20 +2048,21 @@ function playWorkoutMusic() {
   music.volume = 0.85;
   music.currentTime = 0;
   music.play().catch(() => {
-    const retry = () => {
+    // Autoplay blocked — retry on next user touch, but ONLY if still in workout
+    _musicRetryFn = () => {
+      _clearMusicRetry();
+      if (state.workoutDone) return; // workout already finished, don't play
       music.muted = false;
       music.volume = 0.85;
       music.play().catch(() => {});
-      document.removeEventListener('touchstart', retry);
-      document.removeEventListener('click', retry);
     };
-    document.addEventListener('touchstart', retry, { once: true });
-    document.addEventListener('click', retry, { once: true });
+    document.addEventListener('touchstart', _musicRetryFn, { once: true });
+    document.addEventListener('click',      _musicRetryFn, { once: true });
   });
 }
 
 function stopWorkoutMusic() {
-  // Stop both tracks to avoid either lingering in the background
+  _clearMusicRetry(); // remove pending retry so it can't fire after workout ends
   ['workout-music', 'qc-music'].forEach(id => {
     const m = document.getElementById(id);
     if (!m) return;

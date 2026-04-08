@@ -12,10 +12,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="BootyAlarm">
-<link rel="apple-touch-icon" href="/icons/icon-180.png">
-<!-- Additional iOS sizes -->
-<link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png">
+<link rel="apple-touch-icon" href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_180,h_180,c_fill,f_png/v1775682139/Gemini_Generated_Image_7xbbjc7xbbjc7xbb_tpdbob.png">
+<link rel="apple-touch-icon" sizes="192x192" href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_192,h_192,c_fill,f_png/v1775682139/Gemini_Generated_Image_7xbbjc7xbbjc7xbb_tpdbob.png">
+<link rel="apple-touch-icon" sizes="512x512" href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_512,h_512,c_fill,f_png/v1775682139/Gemini_Generated_Image_7xbbjc7xbbjc7xbb_tpdbob.png">
 
 <!-- ── PWA: Android / Chrome / General ── -->
 <meta name="theme-color" content="#FF3C78">
@@ -1467,9 +1466,14 @@
 <!-- Canvas para confetti -->
 <canvas id="confetti-canvas"></canvas>
 
-<!-- Audio de workout (se reproduce en loop durante el ejercicio) -->
+<!-- Música de alarma: Junior H (suena cuando la alarma dispara) -->
 <audio id="workout-music" loop preload="auto">
   <source src="https://res.cloudinary.com/dsprn0ew4/video/upload/v1775536848/Junior_H_con_Banda_-_El_Hijo_Mayor_En_Vivo_rofzm5.mp3" type="audio/mpeg">
+</audio>
+
+<!-- Música de reto rápido: Eden Muñoz - La Nena -->
+<audio id="qc-music" loop preload="auto">
+  <source src="https://res.cloudinary.com/dsprn0ew4/video/upload/v1775681660/Eden_Mu%C3%B1oz_Cosme_Tadeo_-_La_Nena_LETRA_e70dkv.mp3" type="audio/mpeg">
 </audio>
 
 <!-- Hidden audio (legacy) -->
@@ -2003,29 +2007,34 @@ function playAlarmSound() {
 //   2. En startWorkoutScreen() → play() directo (viene de un tap de reto rápido)
 //   3. En la cámara → play() de respaldo (funciona si ya está desbloqueado)
 
+function _getActiveMusic() {
+  // Alarm uses Junior H; quick challenges use Eden Muñoz - La Nena
+  return document.getElementById(state.isRinging ? 'workout-music' : 'qc-music');
+}
+
 function unlockWorkoutMusic() {
-  const music = document.getElementById('workout-music');
-  if (!music) return;
-  if (!music.paused) return; // already playing, don't touch it
-  if (music.readyState === 0) return; // still loading
-  music.muted = true; // truly silent — hardware-level mute during unlock
-  music.play().then(() => {
-    music.pause();
-    music.currentTime = 0;
-    music.muted = false;
-    music._unlocked = true;
-  }).catch(() => { music.muted = false; });
+  // Unlock both tracks silently so both are ready to play without user gesture
+  ['workout-music', 'qc-music'].forEach(id => {
+    const m = document.getElementById(id);
+    if (!m || !m.paused || m.readyState === 0) return;
+    m.muted = true;
+    m.play().then(() => {
+      m.pause();
+      m.currentTime = 0;
+      m.muted = false;
+      m._unlocked = true;
+    }).catch(() => { m.muted = false; });
+  });
 }
 
 function playWorkoutMusic() {
-  const music = document.getElementById('workout-music');
+  const music = _getActiveMusic();
   if (!music) return;
-  if (!music.paused) return; // already playing, don't restart
+  if (!music.paused) return; // already playing
   music.muted = false;
   music.volume = 0.85;
   music.currentTime = 0;
   music.play().catch(() => {
-    // Autoplay blocked — retry immediately on the very next user interaction
     const retry = () => {
       music.muted = false;
       music.volume = 0.85;
@@ -2039,10 +2048,13 @@ function playWorkoutMusic() {
 }
 
 function stopWorkoutMusic() {
-  const music = document.getElementById('workout-music');
-  if (!music) return;
-  music.pause();
-  music.currentTime = 0;
+  // Stop both tracks to avoid either lingering in the background
+  ['workout-music', 'qc-music'].forEach(id => {
+    const m = document.getElementById(id);
+    if (!m) return;
+    m.pause();
+    m.currentTime = 0;
+  });
 }
 
 function stopAlarmSound() {

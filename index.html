@@ -15,11 +15,11 @@
 <!-- Direct Cloudinary URL — iOS Safari loads external apple-touch-icon fine.
      If cross-origin ever fails, the SW proxy at /icons/icon-180.png is the fallback. -->
 <link id="ati-180" rel="apple-touch-icon" sizes="180x180"
-      href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_180,h_180,c_fill,f_png/v1775682139/Gemini_Generated_Image_7xbbjc7xbbjc7xbb_tpdbob.png">
+      href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_180,h_180,c_fill,f_png/v1775761992/WhatsApp_Image_2026-04-09_at_1.09.51_PM_enqynv.jpg">
 <link rel="apple-touch-icon" sizes="192x192"
-      href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_192,h_192,c_fill,f_png/v1775682139/Gemini_Generated_Image_7xbbjc7xbbjc7xbb_tpdbob.png">
+      href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_192,h_192,c_fill,f_png/v1775761992/WhatsApp_Image_2026-04-09_at_1.09.51_PM_enqynv.jpg">
 <link rel="apple-touch-icon" sizes="512x512"
-      href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_512,h_512,c_fill,f_png/v1775682139/Gemini_Generated_Image_7xbbjc7xbbjc7xbb_tpdbob.png">
+      href="https://res.cloudinary.com/dsprn0ew4/image/upload/w_512,h_512,c_fill,f_png/v1775761992/WhatsApp_Image_2026-04-09_at_1.09.51_PM_enqynv.jpg">
 
 <!-- ── PWA: Android / Chrome / General ── -->
 <meta name="theme-color" content="#FF3C78">
@@ -1967,18 +1967,25 @@ function setQCExercise(ex) {
 
 function quickChallenge(reps) {
   unlockAudio();
+  state.isRinging  = false; // explicit: quick challenge is NOT a saved alarm
   state.targetReps = reps;
-  // Play Eden Muñoz DIRECTLY here — this function is called from a button tap,
-  // so we are guaranteed to be inside a user gesture. Most reliable approach.
+
+  // Stop alarm beep + any leftover music first (clean slate)
+  stopAlarmSound();
+  _clearMusicRetry();
+
   const qcMusic = document.getElementById('qc-music');
+  const alMusic = document.getElementById('workout-music');
+  // Hard-stop Junior H so it never bleeds into a quick challenge
+  if (alMusic) { alMusic.pause(); alMusic.currentTime = 0; }
+
   if (qcMusic) {
-    _clearMusicRetry();
-    stopWorkoutMusic(); // stop any track that might be lingering
-    qcMusic.muted   = false;
-    qcMusic.volume  = 0.85;
+    // Play Eden Muñoz DIRECTLY — we are inside a user gesture (button tap)
+    qcMusic.muted  = false;
+    qcMusic.volume = 0.85;
     qcMusic.currentTime = 0;
     qcMusic.play().catch(() => {
-      // Fallback retry (should rarely be needed since we're in a gesture)
+      // Autoplay still blocked — retry on next interaction
       _musicRetryFn = () => {
         _clearMusicRetry();
         if (!state.workoutDone) { qcMusic.volume = 0.85; qcMusic.play().catch(() => {}); }
@@ -1995,10 +2002,11 @@ function quickChallenge(reps) {
 // ══════════════════════════════════════════════════════════════
 function triggerAlarm() {
   state.isRinging = true;
-  // Ensure AudioContext exists (created earlier from user gesture, just in case)
   unlockAudio();
-  playAlarmSound();
-  startWorkoutScreen();
+  // Stop any qc-music or leftover audio before starting the alarm
+  stopWorkoutMusic();
+  playAlarmSound();     // beep oscillators — runs simultaneously with Junior H
+  startWorkoutScreen(); // → calls playWorkoutMusic() because isRinging = true
 }
 
 // ── AUDIO UNLOCK (pre-inicializar AudioContext en gesto del usuario) ──
@@ -2081,20 +2089,26 @@ function _getActiveMusic() {
   return document.getElementById(state.isRinging ? 'workout-music' : 'qc-music');
 }
 
-function unlockWorkoutMusic() {
-  // Pre-unlock both audio elements silently so autoplay policy won't block them.
-  // readyState guard removed: mobile ignores preload="auto" so readyState is often
-  // 0 at page load, which was causing qc-music to never get unlocked.
+// Pre-unlock audio elements — called ONCE on first user gesture.
+// Idempotent: subsequent calls return immediately via the flag.
+// This prevents the race condition where a second touchstart fires
+// after quickChallenge() already started qc-music, pausing it mid-play.
+let _audioElementsUnlocked = false;
+
+function _unlockAudioElements() {
+  if (_audioElementsUnlocked) return;
+  let pending = 0;
   ['workout-music', 'qc-music'].forEach(id => {
     const m = document.getElementById(id);
-    if (!m || !m.paused) return; // skip if actively playing (during workout)
+    if (!m) return;
+    pending++;
     m.muted = true;
     m.play().then(() => {
       m.pause();
       m.currentTime = 0;
       m.muted = false;
-      m._unlocked = true;
-    }).catch(() => { m.muted = false; });
+      if (--pending === 0) _audioElementsUnlocked = true;
+    }).catch(() => { m.muted = false; pending--; });
   });
 }
 
@@ -2716,9 +2730,9 @@ function spawnParticles() {
 // BOOT
 // ══════════════════════════════════════════════════════════════
 
-// Desbloquear audio en cualquier interacción del usuario (crítico en móvil/iOS)
-// Sin {once} para que reintente si el primer intento llega antes de que cargue
-function _unlockAll() { unlockAudio(); unlockWorkoutMusic(); }
+// Pre-unlock AudioContext + HTML audio elements on first user interaction.
+// _unlockAudioElements() is idempotent — safe to leave the listeners attached.
+function _unlockAll() { unlockAudio(); _unlockAudioElements(); }
 document.addEventListener('touchstart', _unlockAll);
 document.addEventListener('click',      _unlockAll);
 
@@ -2730,8 +2744,14 @@ init();
 // ── PWA: Register Service Worker ──
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .catch(() => {}); // fail silently — app works fine without it
+    navigator.serviceWorker.register('/sw.js').then(() => {
+      // When a new SW takes control, re-sync the alarm list to it
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        setTimeout(syncAlarmsToSW, 500);
+      });
+      // If a SW is already controlling the page, sync right away
+      if (navigator.serviceWorker.controller) syncAlarmsToSW();
+    }).catch(() => {}); // fail silently — app works fine without it
   });
 }
 </script>

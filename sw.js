@@ -43,12 +43,12 @@ self.addEventListener('fetch', event => {
   if (url.protocol === 'chrome-extension:') return;
 
   // ── ICON PROXY ──
-  // Intercept /icons/icon-NNN.png requests and serve them from Cloudinary.
-  // This makes the icon appear same-origin to iOS Safari, which ignores
-  // cross-origin apple-touch-icon links.
-  const iconMatch = url.pathname.match(/^\/icons\/icon-(\d+)\.png$/);
+  // Intercept icon requests and serve them from Cloudinary.
+  // Handles /icons/icon-NNN.png and /apple-touch-icon*.png (iOS root fallback).
+  const iconMatch = url.pathname.match(/^\/icons\/icon-(\d+)\.png$/) ||
+                    url.pathname.match(/^\/apple-touch-icon(-precomposed)?\.png$/);
   if (iconMatch) {
-    const size = iconMatch[1];
+    const size = (url.pathname.match(/icon-(\d+)/) || [])[1] || '180';
     const cloudUrl = `${ICON_BASE}/w_${size},h_${size},c_fill,f_png/${ICON_PUB}`;
     event.respondWith(
       caches.match(event.request).then(cached => {

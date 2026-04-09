@@ -1547,6 +1547,8 @@ function init() {
   renderWeek();
   renderAlarms();
   setupAlarmChecker();
+  setupNotifications();
+  checkNotificationLaunch();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1591,6 +1593,7 @@ function handleLogin() {
   renderWeek();
   renderAlarms();
   setupAlarmChecker();
+  setupNotifications();
 }
 
 function updateProfileDisplay() {
@@ -1676,6 +1679,50 @@ function loadAlarms() {
 
 function saveAlarms() {
   localStorage.setItem('bac_alarms_list', JSON.stringify(state.alarms));
+  syncAlarmsToSW();
+}
+
+// ── Notification / Service-Worker integration ──────────────────
+function syncAlarmsToSW() {
+  if (!navigator.serviceWorker?.controller) return;
+  navigator.serviceWorker.controller.postMessage({
+    type: 'SYNC_ALARMS', alarms: state.alarms
+  });
+}
+
+let _swListenerAttached = false;
+function setupNotifications() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  if (_swListenerAttached || !('serviceWorker' in navigator)) return;
+  _swListenerAttached = true;
+  navigator.serviceWorker.addEventListener('message', event => {
+    const { type, alarmId } = event.data || {};
+    if (type === 'ALARM_TRIGGERED') _handleAlarmFromSW(alarmId);
+    if (type === 'SW_READY')        syncAlarmsToSW();
+  });
+  // Give SW a moment to activate, then push current alarms
+  setTimeout(syncAlarmsToSW, 800);
+}
+
+function _handleAlarmFromSW(alarmId) {
+  if (!state.user) return;
+  const alarm = state.alarms.find(a => a.id == alarmId);
+  if (!alarm || state.isRinging) return;
+  alarm.lastTriggered = new Date().toDateString();
+  saveAlarms();
+  state.currentAlarm = alarm;
+  triggerAlarm();
+}
+
+function checkNotificationLaunch() {
+  const params  = new URLSearchParams(window.location.search);
+  const alarmId = params.get('alarm');
+  if (!alarmId) return;
+  window.history.replaceState({}, document.title, window.location.pathname);
+  // Small delay so the app is fully initialized
+  setTimeout(() => _handleAlarmFromSW(parseInt(alarmId, 10)), 400);
 }
 
 function renderAlarms() {

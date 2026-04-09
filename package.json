@@ -1,0 +1,21 @@
+{
+  "name": "booty-alarm-clock",
+  "version": "1.0.0",
+  "description": "Alarm that only stops when you complete your squats or lunges",
+  "private": true,
+  "scripts": {
+    "build": "mkdir -p www && cp index.html sw.js manifest.json www/ && cp -r icons www/",
+    "sync": "npm run build && npx cap sync",
+    "open:android": "npx cap open android",
+    "open:ios": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.2.0",
+    "@capacitor/local-notifications": "^6.1.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/cli": "^6.2.0",
+    "@capacitor/ios": "^6.2.0"
+  }
+}

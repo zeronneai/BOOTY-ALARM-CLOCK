@@ -1,0 +1,15 @@
+{
+  "appId": "com.bootyclock.app",
+  "appName": "BootyAlarm",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_flow",
+      "iconColor": "#FF3C78",
+      "sound": "default"
+    }
+  }
+}

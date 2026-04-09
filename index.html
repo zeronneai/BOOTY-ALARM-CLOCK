@@ -30,6 +30,9 @@
 <meta name="description" content="Alarm that only stops when you complete your squats or lunges">
 <meta name="color-scheme" content="dark">
 
+<!-- Capacitor bridge — injected automatically in native app; no-op on web -->
+<script src="capacitor.js" onerror="void 0"></script>
+
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -1548,6 +1551,8 @@ function init() {
   renderAlarms();
   setupAlarmChecker();
   setupNotifications();
+  _setupCapacitorNotifListener();
+  scheduleCapacitorAlarms();
   checkNotificationLaunch();
 }
 
@@ -1594,6 +1599,8 @@ function handleLogin() {
   renderAlarms();
   setupAlarmChecker();
   setupNotifications();
+  _setupCapacitorNotifListener();
+  scheduleCapacitorAlarms();
 }
 
 function updateProfileDisplay() {
@@ -1680,6 +1687,7 @@ function loadAlarms() {
 function saveAlarms() {
   localStorage.setItem('bac_alarms_list', JSON.stringify(state.alarms));
   syncAlarmsToSW();
+  scheduleCapacitorAlarms(); // native layer — works even when app is fully closed
 }
 
 // ── Notification / Service-Worker integration ──────────────────
@@ -1704,6 +1712,70 @@ function setupNotifications() {
   });
   // Give SW a moment to activate, then push current alarms
   setTimeout(syncAlarmsToSW, 800);
+}
+
+// ── Capacitor: Local Notifications (iOS + Android native background alarms) ──
+// iOS WKWebView does not support Service Workers, so SW alarm scheduling has no
+// effect there. Capacitor LocalNotifications fire even when the app is closed.
+// On Android, this adds a second reliable layer on top of the SW approach.
+const _capLN = window.Capacitor?.Plugins?.LocalNotifications ?? null;
+
+let _capNotifListenerAdded = false;
+function _setupCapacitorNotifListener() {
+  if (!_capLN || _capNotifListenerAdded) return;
+  _capNotifListenerAdded = true;
+  _capLN.addListener('localNotificationActionPerformed', data => {
+    const alarmId = data.notification?.extra?.alarmId;
+    if (alarmId && state.user) _handleAlarmFromSW(alarmId);
+  });
+  // Also handle foreground delivery (app is open when notification fires)
+  _capLN.addListener('localNotificationReceived', data => {
+    const alarmId = data.extra?.alarmId;
+    if (alarmId && state.user && !state.isRinging) _handleAlarmFromSW(alarmId);
+  });
+}
+
+async function scheduleCapacitorAlarms() {
+  if (!_capLN) return; // not running inside Capacitor — skip
+
+  // Request permission (required on iOS 10+, Android 13+)
+  const perm = await _capLN.requestPermissions().catch(() => ({ display: 'denied' }));
+  if (perm.display !== 'granted') return;
+
+  // Cancel all pending notifications to avoid stale/duplicate entries
+  const pending = await _capLN.getPending().catch(() => ({ notifications: [] }));
+  if (pending.notifications.length > 0) {
+    await _capLN.cancel({ notifications: pending.notifications }).catch(() => {});
+  }
+
+  const notifications = [];
+  for (const alarm of state.alarms) {
+    if (!alarm.active) continue;
+
+    let ah = alarm.hour;
+    if (alarm.ampm === 'PM' && ah !== 12) ah += 12;
+    if (alarm.ampm === 'AM' && ah === 12) ah  = 0;
+
+    const now    = new Date();
+    const target = new Date();
+    target.setHours(ah, alarm.min, 0, 0);
+    // If time already passed today, schedule for tomorrow
+    if (target <= now) target.setDate(target.getDate() + 1);
+
+    const exName = alarm.exercise === 'squat' ? 'Squats' : 'Lunges';
+    notifications.push({
+      id:       alarm.id,
+      title:    '🍑 BootyAlarm',
+      body:     `¡Son las ${alarm.hour}:${String(alarm.min).padStart(2,'0')} ${alarm.ampm}! Hora de tus ${alarm.targetReps} ${exName}. ¡Sin excusas!`,
+      schedule: { at: target, every: 'day', count: 730, allowWhileIdle: true },
+      extra:    { alarmId: alarm.id },
+      sound:    'default',
+    });
+  }
+
+  if (notifications.length > 0) {
+    await _capLN.schedule({ notifications }).catch(() => {});
+  }
 }
 
 function _handleAlarmFromSW(alarmId) {

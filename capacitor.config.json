@@ -1,13 +1,17 @@
 {
-  "appId": "com.bootyclock.app",
-  "appName": "BootyAlarm",
+  "appId": "com.zeronne.bootyalarm",
+  "appName": "Booty Alarm",
   "webDir": "www",
   "server": {
     "androidScheme": "https"
   },
+  "ios": {
+    "contentInset": "always",
+    "allowsLinkPreview": false,
+    "backgroundColor": "#0D0A12"
+  },
   "plugins": {
     "LocalNotifications": {
-      "smallIcon": "ic_stat_icon_config_flow",
       "iconColor": "#FF3C78",
       "sound": "default"
     }

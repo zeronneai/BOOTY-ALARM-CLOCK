@@ -1,0 +1,19 @@
+{
+  "appId": "com.zeronne.bootyalarm",
+  "appName": "Booty Alarm",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always",
+    "allowsLinkPreview": false,
+    "backgroundColor": "#0D0A12"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "iconColor": "#FF3C78",
+      "sound": "default"
+    }
+  }
+}

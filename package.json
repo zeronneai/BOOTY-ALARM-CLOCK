@@ -5,9 +5,11 @@
   "private": true,
   "scripts": {
     "build": "mkdir -p www && cp index.html sw.js manifest.json www/ && cp -r icons www/",
-    "sync": "npm run build && npx cap sync",
-    "open:android": "npx cap open android",
-    "open:ios": "npx cap open ios"
+    "icons": "npx @capacitor/assets generate --ios",
+    "sync": "npm run build && npx cap sync ios",
+    "sync:all": "npm run build && npx cap sync",
+    "open:ios": "npx cap open ios",
+    "open:android": "npx cap open android"
   },
   "dependencies": {
     "@capacitor/core": "^6.2.0",
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "@capacitor/android": "^6.2.0",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^6.2.0",
     "@capacitor/ios": "^6.2.0"
   }

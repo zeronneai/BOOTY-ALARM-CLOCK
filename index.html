@@ -1848,7 +1848,7 @@ function renderAlarms() {
 
 function openAlarmForm(id) {
   unlockAudio();
-  unlockWorkoutMusic();
+  _unlockAudioElements();
   state.editingAlarmId = id || null;
 
   if (id) {
@@ -1892,7 +1892,7 @@ function closeAlarmForm() {
 
 function saveAlarm() {
   unlockAudio();
-  unlockWorkoutMusic(); // Desbloquear en el tap de "Guardar"
+  _unlockAudioElements(); // Desbloquear en el tap de "Guardar"
   if (state.editingAlarmId) {
     // Actualizar existente
     const alarm = state.alarms.find(a => a.id === state.editingAlarmId);

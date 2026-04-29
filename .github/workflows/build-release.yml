@@ -44,6 +44,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      - name: Install Android SDK Platform 35
+        run: |
+          yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Verify android.jar
+        run: ls -lh $ANDROID_SDK_ROOT/platforms/android-35/android.jar
+
       - name: Build release AAB
         run: ./gradlew bundleRelease
         working-directory: android

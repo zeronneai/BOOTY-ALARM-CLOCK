@@ -2,6 +2,7 @@ package com.zeronne.bootyalarm;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.widget.Toast;
 import androidx.core.app.ActivityCompat;
@@ -11,10 +12,16 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
 
     private static final int CAMERA_PERMISSION_REQUEST = 100;
+    private static final int NOTIFICATION_PERMISSION_REQUEST = 101;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        NotificationHelper.createNotificationChannel(this);
+        requestPermissionsIfNeeded();
+    }
+
+    private void requestPermissionsIfNeeded() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
                 != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
@@ -22,6 +29,17 @@ public class MainActivity extends BridgeActivity {
                 new String[]{Manifest.permission.CAMERA},
                 CAMERA_PERMISSION_REQUEST
             );
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                    NOTIFICATION_PERMISSION_REQUEST
+                );
+            }
         }
     }
 
@@ -33,6 +51,14 @@ public class MainActivity extends BridgeActivity {
                 Toast.makeText(
                     this,
                     "La cámara es necesaria para detectar las repeticiones. Actívala en Configuración > Aplicaciones > Booty Alarm.",
+                    Toast.LENGTH_LONG
+                ).show();
+            }
+        } else if (requestCode == NOTIFICATION_PERMISSION_REQUEST) {
+            if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(
+                    this,
+                    "Las notificaciones son necesarias para que las alarmas funcionen en segundo plano.",
                     Toast.LENGTH_LONG
                 ).show();
             }

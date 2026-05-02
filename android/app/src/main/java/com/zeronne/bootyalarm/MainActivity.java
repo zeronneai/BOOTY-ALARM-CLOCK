@@ -16,6 +16,9 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // registerPlugin must be called before super.onCreate() so Capacitor's
+        // bridge can discover the plugin during WebView initialisation
+        registerPlugin(AlarmPlugin.class);
         super.onCreate(savedInstanceState);
         NotificationHelper.createNotificationChannel(this);
         requestPermissionsIfNeeded();

@@ -32,6 +32,8 @@
 
 <!-- Capacitor bridge — injected automatically in native app; no-op on web -->
 <script src="capacitor.js" onerror="void 0"></script>
+<!-- Native AlarmManager plugin bridge (Android only; silent no-op on web/iOS) -->
+<script src="alarm-plugin.js" onerror="void 0"></script>
 
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
@@ -1687,7 +1689,8 @@ function loadAlarms() {
 function saveAlarms() {
   localStorage.setItem('bac_alarms_list', JSON.stringify(state.alarms));
   syncAlarmsToSW();
-  scheduleCapacitorAlarms(); // native layer — works even when app is fully closed
+  scheduleCapacitorAlarms(); // LocalNotifications layer (iOS + Android)
+  syncNativeAlarms(state.alarms); // AlarmManager layer (Android — survives Doze)
 }
 
 // ── Notification / Service-Worker integration ──────────────────
